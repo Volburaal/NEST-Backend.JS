@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int        @id @default(autoincrement())
+  name        String
+  email       String     @unique
+  password    String
+  role        Role
+  affiliation String?
+  proposals   Proposal[] @relation("SubmittedProposals")
+  reviews     Proposal[] @relation("ReviewedProposals")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Proposal {
+  id               Int            @id @default(autoincrement())
+  title            String
+  society          String
+  description      String
+  eventDate        DateTime
+  posters          Json?
+  budget           Float
+  status           ProposalStatus @default(PENDING)
+  comments         String?
+  submittedById    Int
+  submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
+  reviewedById     Int?
+  reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
+  nextReviewerRole Role?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+enum Role {
+  STUDENT
+  MENTOR
+  STUDENT_AFFAIRS
+  DIRECTOR
+  FINANCE_MANAGER
+}
+
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REVISED
+}
