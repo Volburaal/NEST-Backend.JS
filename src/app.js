@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 // Use CORS middleware
 app.use(
   cors({
-    origin: "http://localhost:3000", // Allow requests only from the frontend
+    origin: process.env.CORS_ORIGIN, // Allow requests only from the frontend
   })
 );
 
