@@ -4,18 +4,23 @@ const prisma = new PrismaClient();
 
 export const getProposals = async (req, res) => {
   try {
-    const { role } = req.user;
-
+    const { role, affiliation } = req.user;
+    console.log(affiliation)
     let proposals;
 
     switch (role) {
       case "STUDENT":
-        proposals = await prisma.proposal.findMany();
+        proposals = await prisma.proposal.findMany({
+          where: {
+            society: affiliation,
+          },
+        });
         break;
 
       case "MENTOR":
         proposals = await prisma.proposal.findMany({
           where: {
+            society: affiliation,
             OR: [{ status: "PENDING" }, { status: "REVISED" }],
           },
         });
@@ -28,7 +33,9 @@ export const getProposals = async (req, res) => {
       case "DIRECTOR":
       case "FINANCE_MANAGER":
         proposals = await prisma.proposal.findMany({
-          where: { status: "PENDING" },
+          where: {
+            status: "PENDING",
+          },
         });
         break;
 
@@ -42,13 +49,13 @@ export const getProposals = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   } finally {
     await prisma.$disconnect();
-  }
+  }
 };
+
 
 export const createProposal = async (req, res) => {
   try {
-    const { title, society, description, eventDate, posters, budget } =
-      req.body;
+    const { title, society, description, eventDate, posters, budget } = req.body;
 
     if (!title || !society || !description || !eventDate || !budget) {
       return res.status(400).json({ error: "All fields are required" });
@@ -70,7 +77,10 @@ export const createProposal = async (req, res) => {
 
     res.status(201).json(proposal);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Error creating proposal:", error);
+    res.status(500).json({ error: "Server error" });
+  } finally {
+    await prisma.$disconnect();
   }
 };
 
@@ -85,10 +95,12 @@ export const reviewProposal = async (req, res) => {
 
     if (!proposal)
       return res.status(404).json({ message: "Proposal not found" });
-    if (proposal.nextReviewerRole !== req.user.role)
+
+    if (proposal.nextReviewerRole !== req.user.role) {
       return res
         .status(403)
         .json({ message: "Not authorized to review this proposal" });
+    }
 
     const nextRole = {
       MENTOR: "STUDENT_AFFAIRS",
@@ -109,6 +121,9 @@ export const reviewProposal = async (req, res) => {
 
     res.json(updatedProposal);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Error reviewing proposal:", error);
+    res.status(500).json({ error: "Server error" });
+  } finally {
+    await prisma.$disconnect();
   }
 };

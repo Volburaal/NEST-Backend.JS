@@ -73,6 +73,7 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Find the user by email
     const user = await prisma.user.findUnique({
       where: { email },
     });
@@ -81,18 +82,25 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    // Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    // Include the affiliation field from the user record
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      {
+        id: user.id,
+        role: user.role,
+        affiliation: user.affiliation, // Add affiliation here
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
+    // Return the token and user information
     res.json({
       message: "Login successful",
       token,
@@ -101,13 +109,15 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        affiliation: user.affiliation, // Include affiliation in the response (optional)
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error during login:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
+
 
 // Modify a user
 export const modifyUser = async (req, res) => {
