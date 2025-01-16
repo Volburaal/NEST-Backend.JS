@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 export const getProposals = async (req, res) => {
   try {
     const { role, affiliation } = req.user;
-    console.log(affiliation)
+    console.log(affiliation);
     let proposals;
 
     switch (role) {

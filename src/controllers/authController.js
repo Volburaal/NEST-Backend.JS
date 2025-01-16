@@ -94,7 +94,7 @@ export const login = async (req, res) => {
       {
         id: user.id,
         role: user.role,
-        affiliation: user.affiliation, // Add affiliation here
+        affiliation: user.affiliation,
       },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
@@ -109,7 +109,7 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        affiliation: user.affiliation, // Include affiliation in the response (optional)
+        affiliation: user.affiliation,
       },
     });
   } catch (error) {
