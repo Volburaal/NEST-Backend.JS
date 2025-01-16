@@ -88,7 +88,11 @@ export const login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      {
+        id: user.id,
+        role: user.role,
+        affiliation: user.affiliation,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
@@ -101,10 +105,11 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        affiliation: user.affiliation,
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error during login:", error);
     res.status(500).json({ error: "Server error" });
   }
 };
