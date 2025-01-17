@@ -21,22 +21,14 @@ export const getProposals = async (req, res) => {
         proposals = await prisma.proposal.findMany({
           where: {
             society: affiliation,
-            OR: [{ status: "PENDING" }, { status: "REVISED" }],
           },
         });
         break;
 
       case "STUDENT_AFFAIRS":
-        proposals = await prisma.proposal.findMany();
-        break;
-
       case "DIRECTOR":
       case "FINANCE_MANAGER":
-        proposals = await prisma.proposal.findMany({
-          where: {
-            status: "PENDING",
-          },
-        });
+        proposals = await prisma.proposal.findMany();
         break;
 
       default:
@@ -49,25 +41,25 @@ export const getProposals = async (req, res) => {
     res.status(500).json({ error: "Server error" });
   } finally {
     await prisma.$disconnect();
-  }
+  }
 };
 
 
 export const createProposal = async (req, res) => {
   try {
-    const { title, society, description, eventDate, posters, budget } = req.body;
+    const { title, description, eventDate, posters, budget, venue } = req.body;
 
-    if (!title || !society || !description || !eventDate || !budget) {
+    if (!title || !description || !eventDate || !budget || !venue) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
     const proposal = await prisma.proposal.create({
       data: {
         title,
-        society,
+        society: req.user.affiliation, // Automatically set from user's affiliation
+        venue,
         description,
         eventDate: new Date(eventDate),
-        posters,
         budget,
         status: "PENDING",
         submittedById: req.user.id,
@@ -127,3 +119,4 @@ export const reviewProposal = async (req, res) => {
     await prisma.$disconnect();
   }
 };
+
