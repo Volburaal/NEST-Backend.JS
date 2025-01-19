@@ -8,21 +8,22 @@ import {
 
 const router = express.Router();
 
-// Fetch all proposals or filter by status
+// Fetch proposals based on role and current state
 router.get(
   "/",
-  authenticate(["STUDENT", "MENTOR", "STUDENT_AFFAIRS", "DIRECTOR"]),
+  authenticate(["STUDENT", "MENTOR", "STUDENT_AFFAIRS", "DIRECTOR", "FINANCE_MANAGER"]),
   getProposals
 );
 
 // Create a new proposal (only for STUDENT role)
 router.post("/", authenticate(["STUDENT"]), createProposal);
 
-// Review a proposal (MENTOR, STUDENT_AFFAIRS, DIRECTOR can review)
+// Review a proposal
 router.put(
   "/:id/review",
-  authenticate(["MENTOR", "STUDENT_AFFAIRS", "DIRECTOR"]),
+  authenticate(["MENTOR", "STUDENT_AFFAIRS", "DIRECTOR", "FINANCE_MANAGER"]),
   reviewProposal
 );
 
 export default router;
+
