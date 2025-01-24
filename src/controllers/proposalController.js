@@ -4,19 +4,17 @@ const prisma = new PrismaClient();
 
 export const getProposals = async (req, res) => {
   try {
-    const { role, affiliation } = req.user;
+    const { id, role, affiliation } = req.user;
     let proposals;
-
     switch (role) {
       case "STUDENT":
-        // Students can always see their society's proposals
+        // Students can only see proposals they submitted (filtered by submittedById)
         proposals = await prisma.proposal.findMany({
           where: {
-            society: affiliation,
+            submittedById: id, // Fetch proposals by the student's ID
           },
         });
         break;
-
       case "MENTOR":
         // Mentors can see proposals from their society that are either:
         // 1. Pending initial review
