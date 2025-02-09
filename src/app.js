@@ -10,12 +10,12 @@ const app = express();
 const prisma = new PrismaClient();
 
 // Use CORS middleware
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN, // Allow requests only from the frontend
-  })
-);
+app.use(cors({
+  origin: "*",  // Allow requests from this frontend URL
+  credentials: true,  // If you're handling cookies, enable credentials
+}));
 
+app.options("*", cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/proposals", proposalRoutes);

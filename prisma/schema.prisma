@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -20,10 +14,10 @@ model User {
   password    String
   role        Role
   affiliation String?
-  proposals   Proposal[] @relation("SubmittedProposals")
-  reviews     Proposal[] @relation("ReviewedProposals")
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  reviews     Proposal[] @relation("ReviewedProposals")
+  proposals   Proposal[] @relation("SubmittedProposals")
 }
 
 model Proposal {
@@ -38,12 +32,12 @@ model Proposal {
   status           ProposalStatus @default(PENDING)
   comments         String?
   submittedById    Int
-  submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
   reviewedById     Int?
-  reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
   nextReviewerRole Role?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
+  submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
 }
 
 enum Role {
