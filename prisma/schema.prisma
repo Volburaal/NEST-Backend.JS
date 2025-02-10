@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  id          Int        @id @default(autoincrement())
+  id          Int           @id @default(autoincrement())
   name        String
-  email       String     @unique
+  email       String        @unique
   password    String
   role        Role
   affiliation String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  reviews     Proposal[] @relation("ReviewedProposals")
-  proposals   Proposal[] @relation("SubmittedProposals")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  reviews     Proposal[]    @relation("ReviewedProposals")
+  proposals   Proposal[]    @relation("SubmittedProposals")
+  comments    Comment[]     @relation("UserComments")
 }
 
 model Proposal {
@@ -30,7 +31,6 @@ model Proposal {
   posters          Json?
   budget           Float
   status           ProposalStatus @default(PENDING)
-  comments         String?
   submittedById    Int
   reviewedById     Int?
   nextReviewerRole Role?
@@ -38,6 +38,17 @@ model Proposal {
   updatedAt        DateTime       @updatedAt
   reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
   submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
+  comments         Comment[]      @relation("ProposalComments")
+}
+
+model Comment {
+  id         Int      @id @default(autoincrement())
+  content    String
+  createdAt  DateTime @default(now())
+  userId     Int
+  proposalId Int
+  user       User     @relation("UserComments", fields: [userId], references: [id])
+  proposal   Proposal @relation("ProposalComments", fields: [proposalId], references: [id])
 }
 
 enum Role {

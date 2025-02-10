@@ -6,6 +6,21 @@ export const getProposals = async (req, res) => {
   try {
     const { id, role, affiliation } = req.user;
     let proposals;
+
+    // Include comments in all proposal queries
+    const include = {
+      comments: {
+        include: {
+          user: {
+            select: {
+              name: true,
+              role: true
+            }
+          }
+        }
+      }
+    };
+
     switch (role) {
       case "STUDENT":
         // Students can only see proposals they submitted (filtered by submittedById)
@@ -13,6 +28,7 @@ export const getProposals = async (req, res) => {
           where: {
             submittedById: id, // Fetch proposals by the student's ID
           },
+          include,
         });
         break;
       case "MENTOR":
@@ -34,6 +50,7 @@ export const getProposals = async (req, res) => {
               }
             ]
           },
+          include,
         });
         break;
 
@@ -43,6 +60,7 @@ export const getProposals = async (req, res) => {
           where: {
             nextReviewerRole: "STUDENT_AFFAIRS",
           },
+          include,
         });
         break;
 
@@ -52,6 +70,7 @@ export const getProposals = async (req, res) => {
           where: {
             nextReviewerRole: "DIRECTOR",
           },
+          include,
         });
         break;
 
@@ -61,6 +80,7 @@ export const getProposals = async (req, res) => {
           where: {
             nextReviewerRole: "FINANCE_MANAGER",
           },
+          include,
         });
         break;
 
@@ -76,9 +96,6 @@ export const getProposals = async (req, res) => {
     await prisma.$disconnect();
   }
 };
-
-
-
 
 export const createProposal = async (req, res) => {
   try {
@@ -100,6 +117,9 @@ export const createProposal = async (req, res) => {
         submittedById: req.user.id,
         nextReviewerRole: "MENTOR",
       },
+      include: {
+        comments: true
+      }
     });
 
     res.status(201).json(proposal);
@@ -111,16 +131,17 @@ export const createProposal = async (req, res) => {
   }
 };
 
-
-
 export const reviewProposal = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, comments } = req.body;
-    const { role } = req.user;
+    const { role, id: userId } = req.user;
 
     const proposal = await prisma.proposal.findUnique({
       where: { id: parseInt(id) },
+      include: {
+        comments: true
+      }
     });
 
     if (!proposal) {
@@ -155,14 +176,42 @@ export const reviewProposal = async (req, res) => {
       nextReviewerRole = "MENTOR";
     }
 
-    const updatedProposal = await prisma.proposal.update({
-      where: { id: parseInt(id) },
-      data: {
-        status: status.toUpperCase(),
-        comments,
-        reviewedById: req.user.id,
-        nextReviewerRole,
-      },
+    // Start a transaction to update proposal and add comment
+    const updatedProposal = await prisma.$transaction(async (prisma) => {
+      // Update the proposal status and reviewer
+      const updated = await prisma.proposal.update({
+        where: { id: parseInt(id) },
+        data: {
+          status: status.toUpperCase(),
+          reviewedById: userId,
+          nextReviewerRole,
+        },
+        include: {
+          comments: {
+            include: {
+              user: {
+                select: {
+                  name: true,
+                  role: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Add the review comment if provided
+      if (comments) {
+        await prisma.comment.create({
+          data: {
+            content: comments,
+            userId: userId,
+            proposalId: parseInt(id)
+          }
+        });
+      }
+
+      return updated;
     });
 
     res.json(updatedProposal);

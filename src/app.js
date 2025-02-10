@@ -11,9 +11,9 @@ const prisma = new PrismaClient();
 
 app.use(
   cors({
-    origin: "http://59.103.246.24:3000", // Allow frontend domain
-    credentials: true, // Allow cookies if needed
-    methods: "GET,POST,PUT,DELETE", // Allowed methods
+    origin: process.env.CORS_ORIGIN_DEV,
+    credentials: true,
+    methods: "GET,POST,PUT,DELETE",
   })
 );
 
