@@ -24,7 +24,7 @@ model Proposal {
   id               Int            @id @default(autoincrement())
   title            String
   society          String
-  venue            String @default("Default Venue")
+  venue            String         @default("Default Venue")
   description      String
   eventDate        DateTime
   posters          Json?

@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
-import cors from "cors"; // Import the CORS package
+import cors from "cors";
 import { PrismaClient } from "@prisma/client";
 import authRoutes from "./routes/authRoutes.js";
 import proposalRoutes from "./routes/proposalRoutes.js";
@@ -9,13 +9,14 @@ import proposalRoutes from "./routes/proposalRoutes.js";
 const app = express();
 const prisma = new PrismaClient();
 
-// Use CORS middleware
-app.use(cors({
-  origin: "*",  // Allow requests from this frontend URL
-  credentials: true,  // If you're handling cookies, enable credentials
-}));
+app.use(
+  cors({
+    origin: "http://59.103.246.24:3000", // Allow frontend domain
+    credentials: true, // Allow cookies if needed
+    methods: "GET,POST,PUT,DELETE", // Allowed methods
+  })
+);
 
-app.options("*", cors());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/proposals", proposalRoutes);
