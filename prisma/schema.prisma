@@ -13,12 +13,16 @@ model User {
   email       String        @unique
   password    String
   role        Role
-  affiliation String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  affiliation String?      // Society name or department
+  designation String?      // Temporarily optional to avoid migration issues
+  tenureStart DateTime?    // Temporarily optional to avoid migration issues
+  tenureEnd   DateTime?    // When the role/position ends (null if ongoing)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   reviews     Proposal[]    @relation("ReviewedProposals")
   proposals   Proposal[]    @relation("SubmittedProposals")
   comments    Comment[]     @relation("UserComments")
+  roleHistory RoleHistory[]
 }
 
 model Proposal {
@@ -53,10 +57,10 @@ model Comment {
 
 enum Role {
   STUDENT
-  MENTOR
-  STUDENT_AFFAIRS
-  DIRECTOR
-  FINANCE_MANAGER
+  MENTOR           
+  STUDENT_AFFAIRS  
+  DIRECTOR        
+  FINANCE_MANAGER 
 }
 
 enum ProposalStatus {
@@ -64,4 +68,19 @@ enum ProposalStatus {
   APPROVED
   REJECTED
   REVISED
+}
+
+model RoleHistory {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  role        Role
+  designation String?    
+  affiliation String?   
+  startDate   DateTime
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
 }

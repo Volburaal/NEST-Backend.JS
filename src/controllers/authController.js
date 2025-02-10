@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 // Register a new user
 export const register = async (req, res) => {
   try {
-    const { name, email, role, affiliation, password } = req.body;
+    const { name, email, role, affiliation, designation, password } = req.body;
 
     const validRoles = [
       "STUDENT",
@@ -31,15 +31,30 @@ export const register = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const now = new Date();
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        role,
-        affiliation,
-        password: hashedPassword,
-      },
+    // Create user with role tenure information
+    const user = await prisma.$transaction(async (prisma) => {
+      const newUser = await prisma.user.create({
+        data: {
+          name,
+          email,
+          role,
+          affiliation,
+          designation,
+          password: hashedPassword,
+          tenureStart: now,
+          roleHistory: {
+            create: {
+              role,
+              designation,
+              affiliation,
+              startDate: now,
+            },
+          },
+        },
+      });
+      return newUser;
     });
 
     res.status(201).json({
@@ -49,6 +64,9 @@ export const register = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        affiliation: user.affiliation,
+        designation: user.designation,
+        tenureStart: user.tenureStart,
       },
     });
   } catch (error) {
@@ -73,34 +91,36 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find the user by email
     const user = await prisma.user.findUnique({
       where: { email },
+      include: {
+        roleHistory: {
+          orderBy: { startDate: 'desc' },
+          take: 1,
+        },
+      },
     });
 
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Include the affiliation field from the user record
     const token = jwt.sign(
       {
         id: user.id,
         role: user.role,
         affiliation: user.affiliation,
+        designation: user.designation,
       },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
-    // Return the token and user information
     res.json({
       message: "Login successful",
       token,
@@ -110,6 +130,9 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
         affiliation: user.affiliation,
+        designation: user.designation,
+        tenureStart: user.tenureStart,
+        tenureEnd: user.tenureEnd,
       },
     });
   } catch (error) {
@@ -118,12 +141,12 @@ export const login = async (req, res) => {
   }
 };
 
-
 // Modify a user
 export const modifyUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role, affiliation, password } = req.body;
+    const { name, email, role, affiliation, designation, password } = req.body;
+    const now = new Date();
 
     const validRoles = [
       "STUDENT",
@@ -144,15 +167,42 @@ export const modifyUser = async (req, res) => {
       hashedPassword = await bcrypt.hash(password, 10);
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: parseInt(id) },
-      data: {
-        name,
-        email,
-        role,
-        affiliation,
-        ...(hashedPassword && { password: hashedPassword }),
-      },
+    // Update user and role history in a transaction
+    const updatedUser = await prisma.$transaction(async (prisma) => {
+      // If role is changing, update the current role's end date
+      if (role) {
+        await prisma.roleHistory.updateMany({
+          where: { 
+            userId: parseInt(id),
+            endDate: null 
+          },
+          data: { endDate: now }
+        });
+
+        // Create new role history entry
+        await prisma.roleHistory.create({
+          data: {
+            userId: parseInt(id),
+            role,
+            designation: designation || "",
+            affiliation,
+            startDate: now,
+          },
+        });
+      }
+
+      return await prisma.user.update({
+        where: { id: parseInt(id) },
+        data: {
+          name,
+          email,
+          role,
+          affiliation,
+          designation,
+          ...(role && { tenureStart: now }),
+          ...(hashedPassword && { password: hashedPassword }),
+        },
+      });
     });
 
     res.status(200).json({
@@ -163,6 +213,9 @@ export const modifyUser = async (req, res) => {
         email: updatedUser.email,
         role: updatedUser.role,
         affiliation: updatedUser.affiliation,
+        designation: updatedUser.designation,
+        tenureStart: updatedUser.tenureStart,
+        tenureEnd: updatedUser.tenureEnd,
       },
     });
   } catch (error) {
