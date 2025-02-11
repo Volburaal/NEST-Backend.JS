@@ -13,83 +13,79 @@ export const getProposals = async (req, res) => {
           user: {
             select: {
               name: true,
-              role: true
-            }
-          }
-        }
-      }
+              role: true,
+            },
+          },
+        },
+      },
     };
 
     switch (role) {
       case "STUDENT":
         proposals = await prisma.proposal.findMany({
           where: {
-            submittedById: id, 
+            submittedById: id,
           },
           include,
         });
         break;
-        case "MENTOR":
-          proposals = await prisma.proposal.findMany({
-            where: {
-              AND: [
-                { society: affiliation },
-                {
-                  OR: [
-                    { status: "PENDING" },
-                    { status: "REVISED" },
-                    { status: "REJECTED" },
-                    { status: "APPROVED" },  // ✅ Include Approved
-                    { nextReviewerRole: "MENTOR" }
-                  ]
-                }
-              ]
-            },
-            include,
-          });
-          break;
-        
-        case "STUDENT_AFFAIRS":
-          proposals = await prisma.proposal.findMany({
-            where: {
-              OR: [
-                { nextReviewerRole: "STUDENT_AFFAIRS" },
-                { status: "APPROVED" } // ✅ Include Approved
-              ]
-            },
-            include,
-          });
-          break;
-        
-        case "DIRECTOR":
-          proposals = await prisma.proposal.findMany({
-            where: {
-              OR: [
-                { nextReviewerRole: "DIRECTOR" },
-                { status: "APPROVED" } // ✅ Include Approved
-              ]
-            },
-            include,
-          });
-          break;
-        
-        case "FINANCE_MANAGER":
-          proposals = await prisma.proposal.findMany({
-            where: {
-              OR: [
-                { nextReviewerRole: "FINANCE_MANAGER" },
-                { status: "APPROVED" } // ✅ Include Approved
-              ]
-            },
-            include,
-          });
-          break;
-        
+
+      case "MENTOR":
+        proposals = await prisma.proposal.findMany({
+          where: {
+            AND: [
+              { society: affiliation },
+              {
+                OR: [
+                  { status: "PENDING" },
+                  { status: "REVISED" },
+                  { status: "REJECTED" },
+                  { status: "APPROVED" },
+                  { nextReviewerRole: "MENTOR" },
+                ],
+              },
+            ],
+          },
+          include,
+        });
+        break;
+
+      case "STUDENT_AFFAIRS":
+        // Student Affairs can see all proposals
+        proposals = await prisma.proposal.findMany({
+          include,
+        });
+        break;
+
+      case "DIRECTOR":
+        proposals = await prisma.proposal.findMany({
+          where: {
+            OR: [
+              { nextReviewerRole: "DIRECTOR" },
+              { status: "APPROVED" },
+            ],
+          },
+          include,
+        });
+        break;
+
+      case "FINANCE_MANAGER":
+        proposals = await prisma.proposal.findMany({
+          where: {
+            OR: [
+              { nextReviewerRole: "FINANCE_MANAGER" },
+              { status: "APPROVED" },
+            ],
+          },
+          include,
+        });
+        break;
 
       default:
         return res.status(403).json({ message: "Role not recognized" });
     }
 
+    console.log("Fetched Proposals:", proposals); // Log the fetched proposals
     res.json(proposals);
   } catch (error) {
     console.error("Error fetching proposals:", error);
@@ -110,7 +106,7 @@ export const createProposal = async (req, res) => {
     const proposal = await prisma.proposal.create({
       data: {
         title,
-        society: req.user.affiliation, 
+        society: req.user.affiliation,
         venue,
         description,
         eventDate: new Date(eventDate),
@@ -120,8 +116,8 @@ export const createProposal = async (req, res) => {
         nextReviewerRole: "MENTOR",
       },
       include: {
-        comments: true
-      }
+        comments: true,
+      },
     });
 
     res.status(201).json(proposal);
@@ -142,8 +138,8 @@ export const reviewProposal = async (req, res) => {
     const proposal = await prisma.proposal.findUnique({
       where: { id: parseInt(id) },
       include: {
-        comments: true
-      }
+        comments: true,
+      },
     });
 
     if (!proposal) {
@@ -155,7 +151,7 @@ export const reviewProposal = async (req, res) => {
     }
 
     let nextReviewerRole = null;
-    
+
     if (status.toUpperCase() === "APPROVED") {
       switch (role) {
         case "MENTOR":
@@ -168,7 +164,7 @@ export const reviewProposal = async (req, res) => {
           nextReviewerRole = "FINANCE_MANAGER";
           break;
         case "FINANCE_MANAGER":
-          nextReviewerRole = null; 
+          nextReviewerRole = null;
           break;
       }
     } else {
@@ -189,12 +185,12 @@ export const reviewProposal = async (req, res) => {
               user: {
                 select: {
                   name: true,
-                  role: true
-                }
-              }
-            }
-          }
-        }
+                  role: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       if (comments) {
@@ -202,8 +198,8 @@ export const reviewProposal = async (req, res) => {
           data: {
             content: comments,
             userId: userId,
-            proposalId: parseInt(id)
-          }
+            proposalId: parseInt(id),
+          },
         });
       }
 
@@ -218,4 +214,3 @@ export const reviewProposal = async (req, res) => {
     await prisma.$disconnect();
   }
 };
-
