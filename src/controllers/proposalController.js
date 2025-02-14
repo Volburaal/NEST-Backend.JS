@@ -23,9 +23,7 @@ export const getProposals = async (req, res) => {
     switch (role) {
       case "STUDENT":
         proposals = await prisma.proposal.findMany({
-          where: {
-            submittedById: id,
-          },
+          where: { submittedById: id },
           include,
         });
         break;
@@ -50,33 +48,11 @@ export const getProposals = async (req, res) => {
         });
         break;
 
+      // below are super admin roles, so all proposals are listed to these roles
       case "STUDENT_AFFAIRS":
-        // Student Affairs can see all proposals
-        proposals = await prisma.proposal.findMany({
-          include,
-        });
-        break;
-
       case "DIRECTOR":
-        proposals = await prisma.proposal.findMany({
-          where: {
-            OR: [
-              { nextReviewerRole: "DIRECTOR" },
-              { status: "APPROVED" },
-            ],
-          },
-          include,
-        });
-        break;
-
       case "FINANCE_MANAGER":
         proposals = await prisma.proposal.findMany({
-          where: {
-            OR: [
-              { nextReviewerRole: "FINANCE_MANAGER" },
-              { status: "APPROVED" },
-            ],
-          },
           include,
         });
         break;
@@ -85,7 +61,6 @@ export const getProposals = async (req, res) => {
         return res.status(403).json({ message: "Role not recognized" });
     }
 
-    console.log("Fetched Proposals:", proposals); // Log the fetched proposals
     res.json(proposals);
   } catch (error) {
     console.error("Error fetching proposals:", error);
@@ -147,7 +122,9 @@ export const reviewProposal = async (req, res) => {
     }
 
     if (proposal.nextReviewerRole !== role) {
-      return res.status(403).json({ message: "Not authorized to review this proposal" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to review this proposal" });
     }
 
     let nextReviewerRole = null;
