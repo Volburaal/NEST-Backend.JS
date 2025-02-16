@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
 import { existsSync, mkdirSync } from 'fs';
 import { PrismaClient } from '@prisma/client';
+import { authenticate } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +53,7 @@ const handleUploadErrors = (err, req, res, next) => {
 
 // File upload route
 router.post('/proposal/:proposalId/upload',
+  authenticate(['STUDENT']),
   upload.array('files', 5),
   handleUploadErrors,
   async (req, res) => {
