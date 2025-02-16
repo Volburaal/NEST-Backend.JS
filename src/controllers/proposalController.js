@@ -8,16 +8,24 @@ export const getProposals = async (req, res) => {
     let proposals;
 
     const include = {
+      submittedBy: {
+        select: {
+          name: true,
+          email: true,
+          role: true
+        }
+      },
       comments: {
         include: {
           user: {
             select: {
               name: true,
-              role: true,
-            },
-          },
-        },
+              role: true
+            }
+          }
+        }
       },
+      files: true
     };
 
     switch (role) {

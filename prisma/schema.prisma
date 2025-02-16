@@ -43,6 +43,7 @@ model Proposal {
   reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
   submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
   comments         Comment[]      @relation("ProposalComments")
+  files            File[]
 }
 
 model Comment {
@@ -83,4 +84,17 @@ model RoleHistory {
   updatedAt   DateTime  @updatedAt
 
   @@index([userId])
+}
+
+model File {
+  id          Int       @id @default(autoincrement())
+  filename    String
+  path        String
+  uploadedAt  DateTime  @default(now())
+  proposal    Proposal  @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  proposalId  Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([proposalId])
 }
