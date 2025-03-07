@@ -12,20 +12,20 @@ export const getProposals = async (req, res) => {
         select: {
           name: true,
           email: true,
-          role: true
-        }
+          role: true,
+        },
       },
       comments: {
         include: {
           user: {
             select: {
               name: true,
-              role: true
-            }
-          }
-        }
+              role: true,
+            },
+          },
+        },
       },
-      files: true
+      files: true,
     };
 
     switch (role) {
@@ -82,7 +82,7 @@ export const createProposal = async (req, res) => {
   try {
     const { title, description, eventDate, posters, budget, venue } = req.body;
 
-    if (!title || !description || !eventDate || !budget || !venue) {
+    if (!title || !description || !eventDate || !venue) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
@@ -93,7 +93,7 @@ export const createProposal = async (req, res) => {
         venue,
         description,
         eventDate: new Date(eventDate),
-        budget,
+        budget: budget !== undefined ? budget : null,
         status: "PENDING",
         submittedById: req.user.id,
         nextReviewerRole: "MENTOR",
