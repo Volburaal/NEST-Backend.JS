@@ -85,6 +85,11 @@ export const createProposal = async (req, res) => {
     if (!title || !description || !eventDate || !venue) {
       return res.status(400).json({ error: "All fields are required" });
     }
+    let nextRole="MENTOR"
+    if(req.user.role == "STUDENT_AFFAIRS"){
+      nextRole="DIRECTOR"
+    }
+    
 
     const proposal = await prisma.proposal.create({
       data: {
@@ -96,7 +101,7 @@ export const createProposal = async (req, res) => {
         budget: budget !== undefined ? budget : null,
         status: "PENDING",
         submittedById: req.user.id,
-        nextReviewerRole: "MENTOR",
+        nextReviewerRole: nextRole,
       },
       include: {
         comments: true,
