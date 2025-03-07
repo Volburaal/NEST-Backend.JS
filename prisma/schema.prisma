@@ -13,15 +13,15 @@ model User {
   email       String        @unique
   password    String
   role        Role
-  affiliation String?      // Society name or department
-  designation String?      // Temporarily optional to avoid migration issues
-  tenureStart DateTime?    // Temporarily optional to avoid migration issues
-  tenureEnd   DateTime?    // When the role/position ends (null if ongoing)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  affiliation String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  designation String?
+  tenureEnd   DateTime?
+  tenureStart DateTime?
+  comments    Comment[]     @relation("UserComments")
   reviews     Proposal[]    @relation("ReviewedProposals")
   proposals   Proposal[]    @relation("SubmittedProposals")
-  comments    Comment[]     @relation("UserComments")
   roleHistory RoleHistory[]
 }
 
@@ -29,7 +29,6 @@ model Proposal {
   id               Int            @id @default(autoincrement())
   title            String
   society          String
-  venue            String         @default("Default Venue")
   description      String
   eventDate        DateTime
   posters          Json?
@@ -40,10 +39,11 @@ model Proposal {
   nextReviewerRole Role?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
-  reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
-  submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
+  venue            String         @default("Default Venue")
   comments         Comment[]      @relation("ProposalComments")
   files            File[]
+  reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
+  submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
 }
 
 model Comment {
@@ -52,16 +52,44 @@ model Comment {
   createdAt  DateTime @default(now())
   userId     Int
   proposalId Int
-  user       User     @relation("UserComments", fields: [userId], references: [id])
   proposal   Proposal @relation("ProposalComments", fields: [proposalId], references: [id])
+  user       User     @relation("UserComments", fields: [userId], references: [id])
+}
+
+model RoleHistory {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  role        Role
+  designation String?
+  affiliation String?
+  startDate   DateTime
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model File {
+  id         Int      @id @default(autoincrement())
+  filename   String
+  path       String
+  uploadedAt DateTime @default(now())
+  proposalId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
 }
 
 enum Role {
   STUDENT
-  MENTOR           
-  STUDENT_AFFAIRS  
-  DIRECTOR        
-  FINANCE_MANAGER 
+  MENTOR
+  STUDENT_AFFAIRS
+  DIRECTOR
+  FINANCE_MANAGER
 }
 
 enum ProposalStatus {
@@ -69,32 +97,4 @@ enum ProposalStatus {
   APPROVED
   REJECTED
   REVISED
-}
-
-model RoleHistory {
-  id          Int       @id @default(autoincrement())
-  userId      Int
-  user        User      @relation(fields: [userId], references: [id])
-  role        Role
-  designation String?    
-  affiliation String?   
-  startDate   DateTime
-  endDate     DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([userId])
-}
-
-model File {
-  id          Int       @id @default(autoincrement())
-  filename    String
-  path        String
-  uploadedAt  DateTime  @default(now())
-  proposal    Proposal  @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  proposalId  Int
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([proposalId])
 }
