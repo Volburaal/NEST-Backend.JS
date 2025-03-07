@@ -33,7 +33,7 @@ model Proposal {
   description      String
   eventDate        DateTime
   posters          Json?
-  budget           Float
+  budget           Float?
   status           ProposalStatus @default(PENDING)
   submittedById    Int
   reviewedById     Int?
