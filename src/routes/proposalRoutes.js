@@ -16,7 +16,7 @@ router.get(
 );
 
 // Create a new proposal (only for STUDENT role)
-router.post("/", authenticate(["STUDENT"]), createProposal);
+router.post("/", authenticate(["STUDENT", "STUDENT_AFFAIRS"]), createProposal);
 
 // Review a proposal
 router.put(
