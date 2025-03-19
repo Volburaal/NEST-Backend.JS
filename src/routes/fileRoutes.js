@@ -140,7 +140,9 @@ router.get('/:fileId',
         return res.status(404).json({ message: 'File not found' });
       }
 
-      const filePath = path.resolve(__dirname, '../../', file.path);
+      // const filePath = path.resolve(__dirname, './uploads', file.path);
+      const filePath = './'+file.path;
+      console.log(filePath)
       res.download(filePath, file.filename);
     } catch (error) {
       console.error('Download error:', error);
