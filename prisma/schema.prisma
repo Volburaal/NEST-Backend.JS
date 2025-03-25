@@ -84,6 +84,13 @@ model File {
   @@index([proposalId])
 }
 
+model Feedback{
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  submittedBy String
+}
+
 enum Role {
   STUDENT
   MENTOR

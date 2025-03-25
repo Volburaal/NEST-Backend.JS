@@ -53,7 +53,7 @@ const handleUploadErrors = (err, req, res, next) => {
 
 // File upload route
 router.post('/proposal/:proposalId/upload',
-  authenticate(['STUDENT']),
+  authenticate(["STUDENT", "STUDENT_AFFAIRS"]),
   upload.array('files', 5),
   handleUploadErrors,
   async (req, res) => {
