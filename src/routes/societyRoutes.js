@@ -1,0 +1,14 @@
+import express from "express";
+import { authenticate } from "../middleware/auth.js";
+import {
+    getSociety,
+    addStudent,
+    createSociety,
+} from "../controllers/societyController.js";
+
+const router = express.Router();
+
+router.get("/", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), getSociety);
+router.post("/", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), addStudent);
+router.post("/create", authenticate(["STUDENT_AFFAIRS"]), createSociety);
+export default router;

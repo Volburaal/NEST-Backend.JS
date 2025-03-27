@@ -22,7 +22,7 @@ model User {
   comments    Comment[]     @relation("UserComments")
   reviews     Proposal[]    @relation("ReviewedProposals")
   proposals   Proposal[]    @relation("SubmittedProposals")
-  roleHistory RoleHistory[]
+  roleHistory RoleHistory[] 
 }
 
 model Proposal {
@@ -89,6 +89,57 @@ model Feedback{
   title       String
   content     String
   submittedBy String
+}
+
+model Faculty{
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  extension    Int      @unique
+  name         String
+  affiliations String[]
+
+  societies    Society[] @relation("SocietyMentor") // Add this relation field
+}
+
+model Student {
+  id         Int        @id @default(autoincrement())
+  name       String
+  rollnumber String     @unique
+  phone      String     @unique
+
+  memberships      SocietyMembership[]
+}
+
+model Society {
+  id            Int        @id @default(autoincrement())
+  name          String
+  mentorID      Int
+  presidentId   Int
+  vicePresidentId Int
+  secretaryId   Int
+
+  mentor        Faculty    @relation("SocietyMentor", fields: [mentorID], references: [id])
+
+  memberships   SocietyMembership[]
+}
+
+model SocietyMembership {
+  id             Int      @id @default(autoincrement())
+  studentId      Int
+  societyId      Int
+  role           MembershipRole @default(MEMBER)
+
+  student        Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  society        Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, societyId])
+}
+
+enum MembershipRole {
+  MEMBER
+  PRESIDENT
+  VICE_PRESIDENT
+  SECRETARY
 }
 
 enum Role {
