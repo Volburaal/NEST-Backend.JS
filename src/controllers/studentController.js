@@ -4,12 +4,8 @@ const prisma = new PrismaClient();
 
 export const createStudent = async (req, res) => {
     try {
-        // Check the request body
-        console.log(req.body);  // Log the request body to inspect its content
+        const { name, rollnumber, phone } = req.body;
 
-        const { name, rollnumber, phone } = req.body;  // Extract name, roll, phone from the request body
-
-        // Check if any values are missing or undefined
         if (!rollnumber || !phone) {
             return res.status(400).json({ message: 'Missing rollnumber or phone' });
         }
