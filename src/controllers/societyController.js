@@ -17,11 +17,14 @@ export const getSociety = async (req, res) => {
 }
 export const addStudent = async (req, res) => {
     try{
-        console.log("Adding Student")
-        console.log(req.body)
+        const {selectedStudent, role} = req.body
+        const society = req.user.affiliation
+        const societyID = await prisma.society.findMany({
+        });
+        console.log(selectedStudent,societyID,role)
     }
     catch (error) {
-        console.error("Error fetching feedback:", error);
+        console.error("Error adding student to society:", error);
         res.status(500).json({ error: "Server error" });
     }
     finally {

@@ -9,8 +9,8 @@ import {
 
 const router = express.Router();
 
-router.post("/create", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), createStudent);
-router.put("/delete", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), updateStudent);
-router.delete("/update", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]),deleteStudent);
-router.get("/", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]),getStudents);
+router.post("/create", authenticate(["STUDENT_AFFAIRS"]), createStudent);
+router.delete("/delete", authenticate(["STUDENT_AFFAIRS"]), deleteStudent);
+router.put("/update", authenticate(["STUDENT_AFFAIRS"]),updateStudent);
+router.get("/", authenticate(["STUDENT_AFFAIRS"]),getStudents);
 export default router;

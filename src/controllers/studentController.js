@@ -15,7 +15,7 @@ export const createStudent = async (req, res) => {
         });
 
         if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
+            return res.status(400).json({ message: "Student already exists" });
         }
 
         const student = await prisma.student.create({
@@ -35,39 +35,53 @@ export const createStudent = async (req, res) => {
     }
 };
 export const updateStudent = async (req, res) => {
-    try{
-        console.log("Update Student")
-        console.log(req.body)
-    }
-    catch (error) {
-        console.error("Error fetching feedback:", error);
+    try {
+        const { id, name, rollnumber, phone } = req.body;
+
+        const updatedStudent = await prisma.student.update({
+            where: {
+                id: id, 
+            },
+            data: {
+                name: name,
+                rollnumber: rollnumber,
+                phone: phone,
+            },
+        });
+
+        res.status(200).json({ message: "Student updated successfully", student: updatedStudent });
+    } catch (error) {
+        console.error("Error updating student:", error);
         res.status(500).json({ error: "Server error" });
-    }
-    finally {
+    } finally {
         await prisma.$disconnect();
     }
-    
-}
+};
+
 export const deleteStudent = async (req, res) => {
-    try{
-        console.log("Delete Student")
-        console.log(req.body)
-    }
-    catch (error) {
-        console.error("Error fetching feedback:", error);
+    try {
+        const { id } = req.body;
+        const deletedStudent = await prisma.student.delete({
+            where: {
+                id: id,
+            },
+        });
+        res.status(200).json({ message: "Student deleted successfully", student: deletedStudent });
+    } catch (error) {
+        console.error("Error deleting student:", error);
         res.status(500).json({ error: "Server error" });
-    }
-    finally {
+    } finally {
         await prisma.$disconnect();
     }
-}
+};
+
 export const getStudents = async (req, res) => {
     try{
         let studentList = await prisma.student.findMany({});
         res.json(studentList)
     }
     catch (error) {
-        console.error("Error fetching feedback:", error);
+        console.error("Error fetching students:", error);
         res.status(500).json({ error: "Server error" });
     }
     finally {

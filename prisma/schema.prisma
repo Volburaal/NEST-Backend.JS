@@ -96,9 +96,9 @@ model Faculty{
   email        String   @unique
   extension    Int      @unique
   name         String
-  affiliations String[]
+  dept         Department
 
-  societies    Society[] @relation("SocietyMentor") // Add this relation field
+  societies    Society[] @relation("SocietyMentor")
 }
 
 model Student {
@@ -111,15 +111,16 @@ model Student {
 }
 
 model Society {
-  id            Int        @id @default(autoincrement())
-  name          String
-  mentorID      Int
-  presidentId   Int
-  vicePresidentId Int
-  secretaryId   Int
+  id               Int        @id @default(autoincrement())
+  name             String     @unique
+  fullName         String
+  mentorID         Int?
+  coMentorID       Int?
+  presidentId      Int?
+  vicePresidentId  Int?
+  secretaryId      Int?
 
-  mentor        Faculty    @relation("SocietyMentor", fields: [mentorID], references: [id])
-
+  mentor           Faculty?    @relation("SocietyMentor", fields: [mentorID], references: [id])
   memberships   SocietyMembership[]
 }
 
@@ -140,6 +141,15 @@ enum MembershipRole {
   PRESIDENT
   VICE_PRESIDENT
   SECRETARY
+}
+
+enum Department{
+  CS
+  SE
+  AI
+  EE
+  SnH
+  FSM
 }
 
 enum Role {
