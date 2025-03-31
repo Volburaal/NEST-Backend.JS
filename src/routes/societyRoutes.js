@@ -6,6 +6,7 @@ import {
     createSociety,
     updateSociety,
     deleteSociety,
+    getMembers,
 } from "../controllers/societyController.js";
 
 const router = express.Router();

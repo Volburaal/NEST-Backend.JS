@@ -141,6 +141,7 @@ enum MembershipRole {
   PRESIDENT
   VICE_PRESIDENT
   SECRETARY
+  TREASURER
 }
 
 enum Department{

@@ -12,5 +12,5 @@ const router = express.Router();
 router.post("/create", authenticate(["STUDENT_AFFAIRS"]), createStudent);
 router.delete("/delete", authenticate(["STUDENT_AFFAIRS"]), deleteStudent);
 router.put("/update", authenticate(["STUDENT_AFFAIRS"]),updateStudent);
-router.get("/", authenticate(["STUDENT_AFFAIRS"]),getStudents);
+router.get("/", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]),getStudents);
 export default router;
