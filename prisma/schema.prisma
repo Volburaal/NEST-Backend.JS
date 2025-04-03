@@ -8,21 +8,27 @@ datasource db {
 }
 
 model User {
-  id          Int           @id @default(autoincrement())
-  name        String
-  email       String        @unique
-  password    String
-  role        Role
-  affiliation String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  designation String?
-  tenureEnd   DateTime?
-  tenureStart DateTime?
-  comments    Comment[]     @relation("UserComments")
-  reviews     Proposal[]    @relation("ReviewedProposals")
-  proposals   Proposal[]    @relation("SubmittedProposals")
-  roleHistory RoleHistory[] 
+  id                 Int           @id @default(autoincrement())
+  name               String
+  email              String        @unique
+  password           String
+  role               Role
+  affiliation        String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  designation        String?
+  tenureEnd          DateTime?
+  tenureStart        DateTime?
+  comments           Comment[]     @relation("UserComments")
+  reviews            Proposal[]    @relation("ReviewedProposals")
+  proposals          Proposal[]    @relation("SubmittedProposals")
+  roleHistory        RoleHistory[]
+
+  assignedToStudent  Int?
+  assignedToFaculty  Int?
+
+  assignedStudent    Student? @relation("UserToStudent", fields: [assignedToStudent], references: [id], onDelete: SetDefault)
+  assignedFaculty    Faculty? @relation("UserToFaculty", fields: [assignedToFaculty], references: [id], onDelete: SetDefault)
 }
 
 model Proposal {
@@ -66,7 +72,7 @@ model RoleHistory {
   endDate     DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  user        User      @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -91,23 +97,27 @@ model Feedback{
   submittedBy String
 }
 
-model Faculty{
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  extension    Int      @unique
-  name         String
-  dept         Department
-
-  societies    Society[] @relation("SocietyMentor")
-}
-
 model Student {
   id         Int        @id @default(autoincrement())
   name       String
   rollnumber String     @unique
   phone      String     @unique
 
-  memberships      SocietyMembership[]
+  assignedUsers User[]  @relation("UserToStudent")
+
+  memberships  SocietyMembership[]
+}
+
+model Faculty {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  extension    Int      @unique
+  name         String
+  dept         Department
+
+  assignedUsers User[]  @relation("UserToFaculty")
+
+  societies    Society[] @relation("SocietyMentor")
 }
 
 model Society {
@@ -151,6 +161,7 @@ enum Department{
   EE
   SnH
   FSM
+  Other
 }
 
 enum Role {

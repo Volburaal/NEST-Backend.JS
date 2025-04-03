@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 // Register a new user
 export const register = async (req, res) => {
   try {
-    const { name, email, role, affiliation, designation, password } = req.body;
+    const { name, email, role, affiliation, designation, password, assignedTo } = req.body;
 
     const validRoles = [
       "STUDENT",
@@ -18,8 +18,7 @@ export const register = async (req, res) => {
     ];
     if (!validRoles.includes(role)) {
       return res.status(400).json({
-        message:
-          "Invalid role. Valid roles are: STUDENT, MENTOR, STUDENT_AFFAIRS, DIRECTOR, FINANCE_MANAGER",
+        message: "Invalid role. Valid roles are: STUDENT, MENTOR, STUDENT_AFFAIRS, DIRECTOR, FINANCE_MANAGER",
       });
     }
 
@@ -33,9 +32,8 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const now = new Date();
 
-    // Create user with role tenure information
     const user = await prisma.$transaction(async (prisma) => {
-      const newUser = await prisma.user.create({
+      return await prisma.user.create({
         data: {
           name,
           email,
@@ -52,9 +50,10 @@ export const register = async (req, res) => {
               startDate: now,
             },
           },
+          assignedToStudent: role === "STUDENT" && assignedTo !== -1 ? assignedTo : null,
+          assignedToFaculty: role !== "STUDENT" && assignedTo !== -1 ? assignedTo : null,
         },
       });
-      return newUser;
     });
 
     res.status(201).json({
@@ -67,6 +66,8 @@ export const register = async (req, res) => {
         affiliation: user.affiliation,
         designation: user.designation,
         tenureStart: user.tenureStart,
+        assignedToStudent: user.assignedToStudent,
+        assignedToFaculty: user.assignedToFaculty,
       },
     });
   } catch (error) {
@@ -75,18 +76,39 @@ export const register = async (req, res) => {
   }
 };
 
-// Get all users
+
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await prisma.user.findMany();
-    res.status(200).json(users);
+    const users = await prisma.user.findMany({
+      include: {
+        assignedStudent: { select: { name: true, rollnumber: true } },
+        assignedFaculty: { select: { name: true, dept: true } },
+      },
+    });
+
+    const formattedUsers = users.map(user => {
+      let assignedToName = "None";
+
+      if (user.role === "STUDENT" && user.assignedStudent) {
+        assignedToName = `${user.assignedStudent.name} (${user.assignedStudent.rollnumber})`;
+      } else if (user.role !== "STUDENT" && user.assignedFaculty) {
+        assignedToName = `${user.assignedFaculty.name} (${user.assignedFaculty.dept})`;
+      }
+
+      return {
+        ...user,
+        assignedToName,
+      };
+    });
+    console.log(formattedUsers)
+    res.status(200).json(formattedUsers);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error" });
   }
 };
 
-// Login user
+
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -141,11 +163,11 @@ export const login = async (req, res) => {
   }
 };
 
-// Modify a user
+
 export const modifyUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role, affiliation, designation, password } = req.body;
+    const { name, email, role, affiliation, designation, password, assignedTo } = req.body;
     const now = new Date();
 
     const validRoles = [
@@ -157,8 +179,7 @@ export const modifyUser = async (req, res) => {
     ];
     if (role && !validRoles.includes(role)) {
       return res.status(400).json({
-        message:
-          "Invalid role. Valid roles are: STUDENT, MENTOR, STUDENT_AFFAIRS, DIRECTOR, FINANCE_MANAGER",
+        message: "Invalid role. Valid roles are: STUDENT, MENTOR, STUDENT_AFFAIRS, DIRECTOR, FINANCE_MANAGER",
       });
     }
 
@@ -167,19 +188,37 @@ export const modifyUser = async (req, res) => {
       hashedPassword = await bcrypt.hash(password, 10);
     }
 
-    // Update user and role history in a transaction
+    const existingUser = await prisma.user.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    let newAssignedToStudent = existingUser.assignedToStudent;
+    let newAssignedToFaculty = existingUser.assignedToFaculty;
+
+    if (assignedTo !== undefined) {
+      if (assignedTo === -1) {
+        newAssignedToStudent = null;
+        newAssignedToFaculty = null;
+      } else if (role === "STUDENT") {
+        newAssignedToStudent = assignedTo;
+        newAssignedToFaculty = null;
+      } else {
+        newAssignedToStudent = null;
+        newAssignedToFaculty = assignedTo;
+      }
+    }
+
     const updatedUser = await prisma.$transaction(async (prisma) => {
-      // If role is changing, update the current role's end date
-      if (role) {
+      if (role && role !== existingUser.role) {
         await prisma.roleHistory.updateMany({
-          where: { 
-            userId: parseInt(id),
-            endDate: null 
-          },
-          data: { endDate: now }
+          where: { userId: parseInt(id), endDate: null },
+          data: { endDate: now },
         });
 
-        // Create new role history entry
         await prisma.roleHistory.create({
           data: {
             userId: parseInt(id),
@@ -201,6 +240,8 @@ export const modifyUser = async (req, res) => {
           designation,
           ...(role && { tenureStart: now }),
           ...(hashedPassword && { password: hashedPassword }),
+          assignedToStudent: newAssignedToStudent,
+          assignedToFaculty: newAssignedToFaculty,
         },
       });
     });
@@ -216,6 +257,8 @@ export const modifyUser = async (req, res) => {
         designation: updatedUser.designation,
         tenureStart: updatedUser.tenureStart,
         tenureEnd: updatedUser.tenureEnd,
+        assignedToStudent: updatedUser.assignedToStudent,
+        assignedToFaculty: updatedUser.assignedToFaculty,
       },
     });
   } catch (error) {
@@ -224,7 +267,7 @@ export const modifyUser = async (req, res) => {
   }
 };
 
-// Delete a user
+
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
