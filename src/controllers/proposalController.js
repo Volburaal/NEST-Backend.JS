@@ -56,7 +56,6 @@ export const getProposals = async (req, res) => {
         });
         break;
 
-      // below are super admin roles, so all proposals are listed to these roles
       case "STUDENT_AFFAIRS":
       case "DIRECTOR":
       case "FINANCE_MANAGER":
@@ -68,7 +67,6 @@ export const getProposals = async (req, res) => {
       default:
         return res.status(403).json({ message: "Role not recognized" });
     }
-
     res.json(proposals);
   } catch (error) {
     console.error("Error fetching proposals:", error);
@@ -77,6 +75,7 @@ export const getProposals = async (req, res) => {
     await prisma.$disconnect();
   }
 };
+
 
 export const createProposal = async (req, res) => {
   try {
@@ -161,6 +160,28 @@ export const reviewProposal = async (req, res) => {
       nextReviewerRole = "MENTOR";
     }
 
+    // Get the user's details for assigning commentedByName
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        name: true,
+        role: true,
+        assignedToStudent: true,
+        assignedToFaculty: true,
+        email: true,
+      },
+    });
+
+    // Determine the commentedByName based on the rules
+    let commentedByName = "";
+    if (user.assignedToStudent === null && user.assignedToFaculty === null) {
+      commentedByName = user.email;  // If both assignedToStudent and assignedToFaculty are null, use email
+    } else if (user.role === "STUDENT") {
+      commentedByName = user.name;  // Use name from Student if user is a student
+    } else {
+      commentedByName = user.name;  // Use name from Faculty if user is not a student
+    }
+
     const updatedProposal = await prisma.$transaction(async (prisma) => {
       const updated = await prisma.proposal.update({
         where: { id: parseInt(id) },
@@ -183,12 +204,14 @@ export const reviewProposal = async (req, res) => {
         },
       });
 
+      // Create the new comment with commentedByName
       if (comments) {
         await prisma.comment.create({
           data: {
             content: comments,
             userId: userId,
             proposalId: parseInt(id),
+            commentedByName: commentedByName, // Assign the determined commentedByName
           },
         });
       }

@@ -58,6 +58,7 @@ model Comment {
   createdAt  DateTime @default(now())
   userId     Int
   proposalId Int
+  commentedByName String?
   proposal   Proposal @relation("ProposalComments", fields: [proposalId], references: [id])
   user       User     @relation("UserComments", fields: [userId], references: [id])
 }

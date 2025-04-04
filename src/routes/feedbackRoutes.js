@@ -7,11 +7,6 @@ import {
 
 const router = express.Router();
 
-router.get(
-  "/",
-  authenticate(["STUDENT_AFFAIRS"]),
-  getFeedback
-);
-
+router.get( "/", authenticate(["STUDENT_AFFAIRS"]), getFeedback);
 router.post("/", authenticate(["STUDENT","MENTOR","DIRECTOR","FINANCE_MANAGER"]), createFeedback);
 export default router;
