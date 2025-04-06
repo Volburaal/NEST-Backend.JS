@@ -100,7 +100,6 @@ export const getAllUsers = async (req, res) => {
         assignedToName,
       };
     });
-    console.log(formattedUsers)
     res.status(200).json(formattedUsers);
   } catch (error) {
     console.error(error);

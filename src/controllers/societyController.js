@@ -19,23 +19,10 @@ export const getSociety = async (req, res) => {
 export const addStudent = async (req, res) => {
     try {
         const { selectedStudent, role } = req.body;
-        const societyName = req.user.affiliation;
         const newRole = role.toUpperCase().replace(/ /g, '_');
         
-        const Tsociety = await prisma.society.findUnique({
-            where: {
-                name: societyName,
-            },
-            include: {
-                memberships: true,
-            },
-        });
 
-        if (!Tsociety) {
-            return res.status(404).json({ error: "Society not found." });
-        }
-
-        const societyID = Tsociety.id;
+        const societyID = parseInt(req.user.affiliation);
         const existingMembership = await prisma.societyMembership.findUnique({
             where: {
                 studentId_societyId: {
@@ -114,9 +101,6 @@ export const removeStudent = async (req, res) => {
 
 export const createSociety = async (req, res) => {
     try {
-        console.log("Adding Society");
-        console.log(req.body);
-
         const { name, fullName, mentorID, coMentorID, token } = req.body;
 
         if (!name || !fullName || !mentorID) {
@@ -210,7 +194,7 @@ export const getMembers = async (req, res) => {
     try {
         const society = await prisma.society.findUnique({
             where: {
-                name: req.user.affiliation,
+                id: parseInt(req.user.affiliation),
             },
             select: {
                 id: true,
@@ -276,7 +260,7 @@ export const deleteMember = async (req, res) => {
 
         const society = await prisma.society.findUnique({
             where: {
-                name: req.user.affiliation,
+                id: parseInt(req.user.affiliation),
             },
             select: {
                 id: true,
@@ -288,7 +272,6 @@ export const deleteMember = async (req, res) => {
         }
 
         const societyID = society.id;
-        console.log(`Deleting member with id ${id} from society with ID ${societyID}`);
 
         if (!id) {
             return res.status(400).json({ error: "Missing id" });
@@ -311,6 +294,20 @@ export const deleteMember = async (req, res) => {
 
     } catch (error) {
         console.error("Error deleting society membership:", error);
+        res.status(500).json({ error: "Server error" });
+    } finally {
+        await prisma.$disconnect();
+    }
+};
+
+
+export const capture = async (req, res) => {
+    try {
+        console.log(req.body)
+
+        return res.status(200).json({ message: "Captured"});
+    } catch (error) {
+        console.error("Error:", error);
         res.status(500).json({ error: "Server error" });
     } finally {
         await prisma.$disconnect();
