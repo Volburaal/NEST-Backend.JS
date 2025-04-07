@@ -101,8 +101,12 @@ model Feedback{
 model Student {
   id         Int        @id @default(autoincrement())
   name       String
+  cnic       String     @unique
+  degree     String
   rollnumber String     @unique
-  phone      String     @unique
+  phone      String?
+  whatsapp   String?
+  residency  Residency @default(DAYSCHOLAR)
 
   assignedUsers User[]  @relation("UserToStudent")
 
@@ -163,6 +167,11 @@ enum Department{
   SnH
   FSM
   Other
+}
+
+enum Residency{
+  DAYSCHOLAR
+  HOSTELLITE
 }
 
 enum Role {

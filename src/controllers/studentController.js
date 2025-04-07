@@ -4,25 +4,37 @@ const prisma = new PrismaClient();
 
 export const createStudent = async (req, res) => {
     try {
-        const { name, rollnumber, phone } = req.body;
+        const { name, cnic, degree, rollnumber, phone, whatsapp, residency } = req.body;
 
-        if (!rollnumber || !phone) {
-            return res.status(400).json({ message: 'Missing rollnumber or phone' });
+        if (!name || !cnic || !degree || !rollnumber) {
+            return res.status(400).json({ message: 'Missing required fields: name, cnic, degree, or rollnumber' });
         }
 
-        const existingUser = await prisma.student.findUnique({
+        const existingStudentByRollnumber = await prisma.student.findUnique({
             where: { rollnumber: rollnumber },
         });
 
-        if (existingUser) {
-            return res.status(400).json({ message: "Student already exists" });
+        if (existingStudentByRollnumber) {
+            return res.status(400).json({ message: "Student with this rollnumber already exists" });
+        }
+
+        const existingStudentByCnic = await prisma.student.findUnique({
+            where: { cnic: cnic },
+        });
+
+        if (existingStudentByCnic) {
+            return res.status(400).json({ message: "Student with this CNIC already exists" });
         }
 
         const student = await prisma.student.create({
             data: {
                 name: name,
+                cnic: cnic,
+                degree: degree,
                 rollnumber: rollnumber,
-                phone: phone,
+                phone: phone || null,
+                whatsapp: whatsapp || null,
+                residency: residency || "DAYSCHOLAR",
             },
         });
 
@@ -34,18 +46,42 @@ export const createStudent = async (req, res) => {
         await prisma.$disconnect();
     }
 };
+
 export const updateStudent = async (req, res) => {
     try {
-        const { id, name, rollnumber, phone } = req.body;
+        console.log(req.body)
+        const { id, name, rollnumber, cnic, degree, phone, whatsapp, residency } = req.body;
+
+        if (!id || !name || !rollnumber || !cnic || !degree) {
+            return res.status(400).json({ message: 'Missing required fields: id, name, rollnumber, cnic, or degree' });
+        }
+
+        const existingStudentByRollnumber = await prisma.student.findUnique({
+            where: { rollnumber: rollnumber },
+        });
+
+        if (existingStudentByRollnumber && existingStudentByRollnumber.id !== id) {
+            return res.status(400).json({ message: "Student with this rollnumber already exists" });
+        }
+
+        const existingStudentByCnic = await prisma.student.findUnique({
+            where: { cnic: cnic },
+        });
+
+        if (existingStudentByCnic && existingStudentByCnic.id !== id) {
+            return res.status(400).json({ message: "Student with this CNIC already exists" });
+        }
 
         const updatedStudent = await prisma.student.update({
-            where: {
-                id: id, 
-            },
+            where: { id: id },
             data: {
                 name: name,
                 rollnumber: rollnumber,
-                phone: phone,
+                cnic: cnic,
+                degree: degree,
+                phone: phone || null,
+                whatsapp: whatsapp || null,
+                residency: residency || "DAYSCHOLAR",
             },
         });
 
@@ -57,6 +93,7 @@ export const updateStudent = async (req, res) => {
         await prisma.$disconnect();
     }
 };
+
 
 export const deleteStudent = async (req, res) => {
     try {
