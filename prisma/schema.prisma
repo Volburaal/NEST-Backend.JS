@@ -8,21 +8,27 @@ datasource db {
 }
 
 model User {
-  id          Int           @id @default(autoincrement())
-  name        String
-  email       String        @unique
-  password    String
-  role        Role
-  affiliation String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  designation String?
-  tenureEnd   DateTime?
-  tenureStart DateTime?
-  comments    Comment[]     @relation("UserComments")
-  reviews     Proposal[]    @relation("ReviewedProposals")
-  proposals   Proposal[]    @relation("SubmittedProposals")
-  roleHistory RoleHistory[]
+  id                 Int           @id @default(autoincrement())
+  name               String
+  email              String        @unique
+  password           String
+  role               Role
+  affiliation        String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  designation        String?
+  tenureEnd          DateTime?
+  tenureStart        DateTime?
+  comments           Comment[]     @relation("UserComments")
+  reviews            Proposal[]    @relation("ReviewedProposals")
+  proposals          Proposal[]    @relation("SubmittedProposals")
+  roleHistory        RoleHistory[]
+
+  assignedToStudent  Int?
+  assignedToFaculty  Int?
+
+  assignedStudent    Student? @relation("UserToStudent", fields: [assignedToStudent], references: [id], onDelete: SetDefault)
+  assignedFaculty    Faculty? @relation("UserToFaculty", fields: [assignedToFaculty], references: [id], onDelete: SetDefault)
 }
 
 model Proposal {
@@ -52,6 +58,7 @@ model Comment {
   createdAt  DateTime @default(now())
   userId     Int
   proposalId Int
+  commentedByName String?
   proposal   Proposal @relation("ProposalComments", fields: [proposalId], references: [id])
   user       User     @relation("UserComments", fields: [userId], references: [id])
 }
@@ -66,7 +73,7 @@ model RoleHistory {
   endDate     DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  user        User      @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -89,6 +96,82 @@ model Feedback{
   title       String
   content     String
   submittedBy String
+}
+
+model Student {
+  id         Int        @id @default(autoincrement())
+  name       String
+  cnic       String     @unique
+  degree     String
+  rollnumber String     @unique
+  phone      String?
+  whatsapp   String?
+  residency  Residency @default(DAYSCHOLAR)
+
+  assignedUsers User[]  @relation("UserToStudent")
+
+  memberships  SocietyMembership[]
+}
+
+model Faculty {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  extension    Int      @unique
+  name         String
+  dept         Department
+
+  assignedUsers User[]  @relation("UserToFaculty")
+
+  societies    Society[] @relation("SocietyMentor")
+}
+
+model Society {
+  id               Int        @id @default(autoincrement())
+  name             String     @unique
+  fullName         String
+  mentorID         Int?
+  coMentorID       Int?
+  presidentId      Int?
+  vicePresidentId  Int?
+  secretaryId      Int?
+
+  mentor           Faculty?    @relation("SocietyMentor", fields: [mentorID], references: [id])
+  memberships   SocietyMembership[]
+}
+
+model SocietyMembership {
+  id             Int      @id @default(autoincrement())
+  studentId      Int
+  societyId      Int
+  role           MembershipRole @default(MEMBER)
+
+  student        Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  society        Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, societyId])
+}
+
+enum MembershipRole {
+  MEMBER
+  PRESIDENT
+  VICE_PRESIDENT
+  SECRETARY
+  TREASURER
+}
+
+enum Department{
+  CS
+  SE
+  AI
+  EE
+  SnH
+  FSM
+  Other
+}
+
+enum Residency{
+  DAYSCHOLAR
+  HOSTELLITE
 }
 
 enum Role {

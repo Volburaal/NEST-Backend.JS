@@ -7,13 +7,6 @@ import {
 
 const router = express.Router();
 
-// Fetch proposals based on role and current state
-router.get(
-  "/",
-  authenticate(["STUDENT_AFFAIRS"]),
-  getFeedback
-);
-
-// Create a new proposal (only for STUDENT role)
+router.get( "/", authenticate(["STUDENT_AFFAIRS"]), getFeedback);
 router.post("/", authenticate(["STUDENT","MENTOR","DIRECTOR","FINANCE_MANAGER"]), createFeedback);
 export default router;
