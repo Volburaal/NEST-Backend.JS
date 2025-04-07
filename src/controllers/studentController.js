@@ -49,7 +49,6 @@ export const createStudent = async (req, res) => {
 
 export const updateStudent = async (req, res) => {
     try {
-        console.log(req.body)
         const { id, name, rollnumber, cnic, degree, phone, whatsapp, residency } = req.body;
 
         if (!id || !name || !rollnumber || !cnic || !degree) {

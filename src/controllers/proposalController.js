@@ -461,7 +461,7 @@ export const reviewProposal = async (req, res) => {
         html: emailContent,
       };
 
-      // Send email to the submitter
+      // Send emails
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           console.error('Error sending email to submitter:', error);
@@ -470,7 +470,6 @@ export const reviewProposal = async (req, res) => {
       });
     }
 
-    // Update the proposal status and add the comment
 
     const updatedProposal = await prisma.$transaction(async (prisma) => {
       const updated = await prisma.proposal.update({
@@ -516,114 +515,3 @@ export const reviewProposal = async (req, res) => {
     await prisma.$disconnect();
   }
 };
-
-
-// export const reviewProposal = async (req, res) => {
-//   try {
-//     console.log(req.body)
-//     const { id } = req.params;
-//     const { status, comments } = req.body;
-//     const { role, id: userId } = req.user;
-
-//     const proposal = await prisma.proposal.findUnique({
-//       where: { id: parseInt(id) },
-//       include: {
-//         comments: true,
-//       },
-//     });
-
-//     if (!proposal) {
-//       return res.status(404).json({ message: "Proposal not found" });
-//     }
-
-//     if (proposal.nextReviewerRole !== role) {
-//       return res
-//         .status(403)
-//         .json({ message: "Not authorized to review this proposal" });
-//     }
-
-//     let nextReviewerRole = null;
-
-//     if (status.toUpperCase() === "APPROVED") {
-//       switch (role) {
-//         case "MENTOR":
-//           nextReviewerRole = "STUDENT_AFFAIRS";
-//           break;
-//         case "STUDENT_AFFAIRS":
-//           nextReviewerRole = "DIRECTOR";
-//           break;
-//         case "DIRECTOR":
-//           nextReviewerRole = "FINANCE_MANAGER";
-//           break;
-//         case "FINANCE_MANAGER":
-//           nextReviewerRole = null;
-//           break;
-//       }
-//     } else {
-//       nextReviewerRole = "MENTOR";
-//     }
-
-//     const user = await prisma.user.findUnique({
-//       where: { id: userId },
-//       select: {
-//         name: true,
-//         role: true,
-//         assignedToStudent: true,
-//         assignedToFaculty: true,
-//         email: true,
-//       },
-//     });
-
-//     let commentedByName = "";
-//     if (user.assignedToStudent === null && user.assignedToFaculty === null) {
-//       commentedByName = user.email;
-//     } else if (user.role === "STUDENT") {
-//       commentedByName = user.name;
-//     } else {
-//       commentedByName = user.name;
-//     }
-
-//     const updatedProposal = await prisma.$transaction(async (prisma) => {
-//       const updated = await prisma.proposal.update({
-//         where: { id: parseInt(id) },
-//         data: {
-//           status: status.toUpperCase(),
-//           reviewedById: userId,
-//           nextReviewerRole,
-//         },
-//         include: {
-//           comments: {
-//             include: {
-//               user: {
-//                 select: {
-//                   name: true,
-//                   role: true,
-//                 },
-//               },
-//             },
-//           },
-//         },
-//       });
-
-//       if (comments) {
-//         await prisma.comment.create({
-//           data: {
-//             content: comments,
-//             userId: userId,
-//             proposalId: parseInt(id),
-//             commentedByName: commentedByName,
-//           },
-//         });
-//       }
-
-//       return updated;
-//     });
-
-//     res.json(updatedProposal);
-//   } catch (error) {
-//     console.error("Error reviewing proposal:", error);
-//     res.status(500).json({ error: "Server error" });
-//   } finally {
-//     await prisma.$disconnect();
-//   }
-// };
