@@ -25,6 +25,11 @@ export const getProposals = async (req, res) => {
     const { id, role, affiliation } = req.user;
     let proposals;
 
+    const society = await prisma.society.findUnique({
+      where: { id: parseInt(affiliation) },
+    });
+    const societyName = society ? society.name : null;
+
     const include = {
       submittedBy: {
         select: {
@@ -58,7 +63,7 @@ export const getProposals = async (req, res) => {
         proposals = await prisma.proposal.findMany({
           where: {
             AND: [
-              { society: affiliation },
+              { society: societyName },
               {
                 OR: [
                   { status: "PENDING" },
@@ -240,7 +245,7 @@ export const createProposal = async (req, res) => {
     const proposal = await prisma.proposal.create({
       data: {
         title,
-        society: req.user.affiliation,
+        society: societyName,
         venue,
         description,
         eventDate: new Date(eventDate),
@@ -370,7 +375,6 @@ export const reviewProposal = async (req, res) => {
         html: emailContent,
       };
 
-      // Send email to the submitter
       transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           console.error('Error sending email:', error);
@@ -378,7 +382,6 @@ export const reviewProposal = async (req, res) => {
         }
       });
 
-      // Send email to the next reviewer
       const nextReviewers = await prisma.user.findMany({
         where: { role: nextReviewerRole },
       });
