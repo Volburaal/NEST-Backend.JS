@@ -24,6 +24,7 @@ export const getProposals = async (req, res) => {
   try {
     const { id, role, affiliation } = req.user;
     let proposals;
+    console.log(req.user);
 
     const society = await prisma.society.findUnique({
       where: { id: parseInt(affiliation) },

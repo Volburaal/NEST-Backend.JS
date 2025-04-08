@@ -116,7 +116,7 @@ model Student {
 model Faculty {
   id           Int      @id @default(autoincrement())
   email        String   @unique
-  extension    Int      @unique
+  extension    Int
   name         String
   dept         Department
 

@@ -11,8 +11,7 @@ export const createFaculty = async (req, res) => {
         const existingFaculty = await prisma.faculty.findFirst({
             where: {
                 OR: [
-                    { email: email },
-                    { extension: extension }
+                    { email: email }
                 ]
             }
         });
