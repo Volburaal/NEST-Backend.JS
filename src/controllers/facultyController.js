@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 export const createFaculty = async (req, res) => {
     try{
         const { name, email, extension, dept, token } = req.body;
-        if (!name || !email || !extension || !dept) {
+        if (!name || !email || extension === undefined || !dept) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
         const existingFaculty = await prisma.faculty.findFirst({

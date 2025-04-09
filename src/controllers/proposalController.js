@@ -24,12 +24,6 @@ export const getProposals = async (req, res) => {
   try {
     const { id, role, affiliation } = req.user;
     let proposals;
-    console.log(req.user);
-
-    const society = await prisma.society.findUnique({
-      where: { id: parseInt(affiliation) },
-    });
-    const societyName = society ? society.name : null;
 
     const include = {
       submittedBy: {
@@ -54,13 +48,11 @@ export const getProposals = async (req, res) => {
 
     switch (role) {
       case "STUDENT":
-        proposals = await prisma.proposal.findMany({
-          where: { submittedById: id },
-          include,
-        });
-        break;
-
       case "MENTOR":
+        const society = await prisma.society.findUnique({
+          where: { id: parseInt(affiliation) },
+        });
+        const societyName = society ? society.name : null;
         proposals = await prisma.proposal.findMany({
           where: {
             AND: [
