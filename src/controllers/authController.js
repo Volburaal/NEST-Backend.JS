@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 // Register a new user
 export const register = async (req, res) => {
   try {
-    const { name, email, role, affiliation, designation, password, assignedTo } = req.body;
+    const { email, role, affiliation, password, assignedTo } = req.body;
 
     const validRoles = [
       "STUDENT",
@@ -35,11 +35,9 @@ export const register = async (req, res) => {
     const user = await prisma.$transaction(async (prisma) => {
       return await prisma.user.create({
         data: {
-          name,
           email,
           role,
           affiliation,
-          designation,
           password: hashedPassword,
           tenureStart: now,
           roleHistory: {
@@ -60,11 +58,9 @@ export const register = async (req, res) => {
       message: "User registered successfully",
       user: {
         id: user.id,
-        name: user.name,
         email: user.email,
         role: user.role,
         affiliation: user.affiliation,
-        designation: user.designation,
         tenureStart: user.tenureStart,
         assignedToStudent: user.assignedToStudent,
         assignedToFaculty: user.assignedToFaculty,
@@ -166,7 +162,7 @@ export const login = async (req, res) => {
 export const modifyUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role, affiliation, designation, password, assignedTo } = req.body;
+    const { email, role, affiliation, password, assignedTo } = req.body;
     const now = new Date();
 
     const validRoles = [
@@ -232,11 +228,9 @@ export const modifyUser = async (req, res) => {
       return await prisma.user.update({
         where: { id: parseInt(id) },
         data: {
-          name,
           email,
           role,
           affiliation,
-          designation,
           ...(role && { tenureStart: now }),
           ...(hashedPassword && { password: hashedPassword }),
           assignedToStudent: newAssignedToStudent,
@@ -249,11 +243,9 @@ export const modifyUser = async (req, res) => {
       message: "User updated successfully",
       user: {
         id: updatedUser.id,
-        name: updatedUser.name,
         email: updatedUser.email,
         role: updatedUser.role,
         affiliation: updatedUser.affiliation,
-        designation: updatedUser.designation,
         tenureStart: updatedUser.tenureStart,
         tenureEnd: updatedUser.tenureEnd,
         assignedToStudent: updatedUser.assignedToStudent,
