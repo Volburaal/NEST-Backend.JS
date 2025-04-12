@@ -28,7 +28,6 @@ export const getProposals = async (req, res) => {
     const include = {
       submittedBy: {
         select: {
-          name: true,
           email: true,
           role: true,
         },
@@ -37,7 +36,6 @@ export const getProposals = async (req, res) => {
         include: {
           user: {
             select: {
-              name: true,
               role: true,
             },
           },

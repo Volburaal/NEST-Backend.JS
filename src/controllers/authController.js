@@ -43,7 +43,6 @@ export const register = async (req, res) => {
           roleHistory: {
             create: {
               role,
-              designation,
               affiliation,
               startDate: now,
             },

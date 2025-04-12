@@ -11,7 +11,7 @@ import { scheduleMeeting } from "../controllers/meetingController.js";
 const router = express.Router();
 
 router.get("/", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), getSociety);
-router.post("/meeting", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), scheduleMeeting);
+
 router.post("/create", authenticate(["STUDENT_AFFAIRS"]), createSociety);
 router.put("/update", authenticate(["STUDENT_AFFAIRS"]), updateSociety);
 router.delete("/delete", authenticate(["STUDENT_AFFAIRS"]), deleteSociety);

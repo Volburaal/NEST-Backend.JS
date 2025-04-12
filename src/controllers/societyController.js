@@ -129,11 +129,10 @@ export const updateSociety = async (req, res) => {
 
         const { id, name, fullName, mentorID, coMentorID, token } = req.body;
 
-                if (!id) {
+        if (!id) {
             return res.status(400).json({ error: "Society ID is required" });
         }
-
-                const existingSociety = await prisma.society.findUnique({
+        const existingSociety = await prisma.society.findUnique({
             where: { id },
         });
 
@@ -141,17 +140,17 @@ export const updateSociety = async (req, res) => {
             return res.status(404).json({ error: "Society not found" });
         }
 
-                const updatedSociety = await prisma.society.update({
+        const updatedSociety = await prisma.society.update({
             where: { id },
             data: {
                 name: name || existingSociety.name,
                 fullName: fullName || existingSociety.fullName,
                 mentorID: mentorID || existingSociety.mentorID,
                 coMentorID: coMentorID || existingSociety.coMentorID,
-                            },
+            },
         });
 
-                return res.status(200).json({ message: "Society updated successfully", society: updatedSociety });
+        return res.status(200).json({ message: "Society updated successfully", society: updatedSociety });
     } catch (error) {
         console.error("Error updating society:", error);
         res.status(500).json({ error: "Server error" });
