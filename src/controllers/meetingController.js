@@ -253,7 +253,7 @@ export const updateAttendance = async (req, res) => {
         },
       })
     }
-    
+    return res.status(200).json({message: "Attendance updated successfully"});
 
   } catch (error) {
     console.error('Error updating attendance:', error);
@@ -268,7 +268,7 @@ export const deleteMinute = async (req, res) => {
     const response = await prisma.minutes.delete({
       where: { id: parseInt(minuteId) },
     });
-    return res.status(200).json({message: "Minute deleted successfully"});   
+    return res.status(200).json({message: "Minute deleted successfully"});
   } catch (error) {
     console.error('Error deleting minute:', error);
     return res.status(500).json({ error: 'Server error while deleting minute' });

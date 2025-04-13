@@ -97,11 +97,9 @@ export const removeStudent = async (req, res) => {
     }
 };
 
-
-
 export const createSociety = async (req, res) => {
     try {
-        const { name, fullName, mentorID, coMentorID, token } = req.body;
+        const { name, fullName, mentorID, coMentorID, presidentId, vicePresidentId, secretaryId, treasurerId, mediaHeadId, token } = req.body;
 
         if (!name || !fullName || !mentorID) {
             return res.status(400).json({ error: "Name, full name, and mentor ID are required" });
@@ -113,6 +111,11 @@ export const createSociety = async (req, res) => {
                 fullName,
                 mentorID,
                 coMentorID,
+                presidentId,
+                vicePresidentId,
+                secretaryId,
+                treasurerId,
+                mediaHeadId
             },
         });
         return res.status(201).json({ message: "Society created successfully", society: newSociety });
@@ -126,8 +129,7 @@ export const createSociety = async (req, res) => {
 
 export const updateSociety = async (req, res) => {
     try {
-
-        const { id, name, fullName, mentorID, coMentorID, token } = req.body;
+        const {id,  name, fullName, mentorID, coMentorID, presidentId, vicePresidentId, secretaryId, treasurerId, mediaHeadId, token } = req.body;
 
         if (!id) {
             return res.status(400).json({ error: "Society ID is required" });
@@ -145,8 +147,13 @@ export const updateSociety = async (req, res) => {
             data: {
                 name: name || existingSociety.name,
                 fullName: fullName || existingSociety.fullName,
-                mentorID: mentorID || existingSociety.mentorID,
-                coMentorID: coMentorID || existingSociety.coMentorID,
+                mentorID,
+                coMentorID,
+                presidentId,
+                vicePresidentId,
+                secretaryId,
+                treasurerId,
+                mediaHeadId
             },
         });
 

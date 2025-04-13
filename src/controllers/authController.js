@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import nodemailer from 'nodemailer';
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
 
@@ -24,7 +25,114 @@ const generateStudentEmail = (rollnumber) => {
 // Register a new user
 export const register = async (req, res) => {
   try {
-    const { email, role, affiliation, password, assignedTo } = req.body;
+    const { email, role, affiliation, password, assignedTo, assignedToStudent, assignedToFaculty } = req.body;
+    let reciever;
+    let emailBody;
+    let emailTitle = "SFC Portal Account Assignment";
+    if(role === "STUDENT" && assignedToStudent !== -1){
+      const student = await prisma.student.findUnique({
+        where:{id: assignedToStudent}
+      })
+      const roll = student.rollnumber;
+      reciever = generateStudentEmail(roll)
+      emailBody = `
+        <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">Account Allocated</h1>
+        <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px;">
+            <h3 style="text-align: center;"><b>The account ${email} has been allocated to you</b><br></h3>
+            <h4>Your responsibilities include:</h4>
+            <ul>
+              <li>Creating and tracking proposals on behalf of your society</li>
+              <li>Managing all society member records</li>
+              <li>Scheduling meetings</li>
+              <li>Updating meeting details such as minutes and attendance after meetings</li>
+            </ul>
+            <h4>Credentials for the NEST-SAM portal are provided below</h4>
+            <br>
+            <p >Username: <b>${email}</b></p>
+            <p>Password: <b>${password}</b></p>
+            <br>
+            <p>Access the portal on the provided <a href="http://59.103.246.24:3000" style="color: deeppink;">IP</a> (59.103.246.24:3000). Please note that the portal is only accesible on university internet</p>
+          </div>
+      `;
+    }
+    if(role !== "STUDENT" && assignedToFaculty !== -1){
+      const faculty = await prisma.faculty.findUnique({
+        where:{id: assignedToFaculty}
+      })
+      reciever = faculty.email;
+      let responsibilities = `
+        <li>It seems that there are no responsibilities to dish out</li>
+        `;
+      if (role == "MENTOR") {
+        responsibilities = `
+          <li>Reviewing proposals made by your society</li>
+          <li>Managing all society member records</li>
+          <li>Scheduling meetings</li>
+          <li>Updating meeting details such as minutes and attendance after meetings</li>
+        `;
+      }
+      else if (role == "STUDENT_AFFAIRS") {
+        responsibilities = `
+          <li>Reviewing proposals made by societies</li>
+          <li>Managing student, faculty and society records</li>
+          <li>Managing society leadership such as mentor and co-mentor</li>
+          <li>Creating proposals for events not affiliated to any society</li>
+          <li>Managing society account assignments</li>
+          <li style="color: rgb(255, 0, 191); font-weight: bold; list-style-type: none;">Proposals shall be available for reivew once reviewed by the respective society mentor</li>
+        `;
+      }
+      else if (role == "DIRECTOR") {
+        responsibilities = `
+          <li>Reviewing proposals made by societies</li>
+          <li style="color: rgb(255, 0, 191); font-weight: bold; list-style-type: none;">Proposals shall be available for reivew once reviewed by the student affairs incahrge</li>
+        `;
+      }
+      else if (role == "FINANCE_MANAGER") {
+        responsibilities = `
+          <li>Reviewing proposals made by societies and allocating budget if required</li>
+          <li style="color: rgb(255, 0, 191); font-weight: bold; list-style-type: none;">Proposals shall be available for reivew once reviewed by the director</li>
+        `;
+      }
+      emailBody = `
+        <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">Account Allocated</h1>
+        <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px;">
+            <h3 style="text-align: center;"><b>The account ${email} has been allocated to you</b><br></h3>
+            <h4>Your responsibilities include:</h4>
+            <ul>
+              ${responsibilities}
+            </ul>
+            <h4>Credentials for the NEST-SAM portal are provided below</h4>
+            <br>
+            <p >Username: <b>${email}</b></p>
+            <p>Password: <b>${password}</b></p>
+            <br>
+            <p>Access the portal on the provided <a href="http://59.103.246.24:3000" style="color: deeppink;">IP</a> (59.103.246.24:3000). Please note that the portal is only accesible on university internet</p>
+          </div>
+      `;
+    }
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.SENDER_ADDRESS,
+        pass: process.env.EMAIL_APP_PASSWORD,
+      },
+    });
+    const mailOptions = {
+      from: process.env.SENDER_ADDRESS,
+      to: '',
+      bcc: [reciever],
+      subject: emailTitle,
+      html: emailBody,
+    };
+    if(reciever){
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error sending email:', error);
+          return res.status(500).json({ error: 'Error sending account creation email' });
+        }
+        return res.status(200).json({ message: 'Creation Email Sent'});
+      });
+    }
 
     const validRoles = [
       "STUDENT",
@@ -57,13 +165,6 @@ export const register = async (req, res) => {
           affiliation,
           password: hashedPassword,
           tenureStart: now,
-          roleHistory: {
-            create: {
-              role,
-              affiliation,
-              startDate: now,
-            },
-          },
           assignedToStudent: role === "STUDENT" && assignedTo !== -1 ? assignedTo : null,
           assignedToFaculty: role !== "STUDENT" && assignedTo !== -1 ? assignedTo : null,
         },
@@ -126,12 +227,6 @@ export const login = async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where: { email },
-      include: {
-        roleHistory: {
-          orderBy: { startDate: 'desc' },
-          take: 1,
-        },
-      },
     });
 
     if (!user) {
@@ -212,7 +307,7 @@ export const modifyUser = async (req, res) => {
 
     let newAssignedToStudent = existingUser.assignedToStudent;
     let newAssignedToFaculty = existingUser.assignedToFaculty;
-    let updateEmail = ""
+    let updateEmail;
     let emailBody = ""
     let emailTitle = ""
     if (assignedTo !== undefined) {
@@ -374,33 +469,17 @@ export const modifyUser = async (req, res) => {
       subject: emailTitle,
       html: emailBody,
     };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).json({ error: 'Error sending email' });
-      }
-      return res.status(200).json({ message: 'Update Email Sent'});
-    });
+    if(updateEmail){
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error sending email:', error);
+          return res.status(500).json({ error: 'Error sending email' });
+        }
+        return res.status(200).json({ message: 'Update Email Sent'});
+      });
+    }
 
     const updatedUser = await prisma.$transaction(async (prisma) => {
-      if (role && role !== existingUser.role) {
-        await prisma.roleHistory.updateMany({
-          where: { userId: parseInt(id), endDate: null },
-          data: { endDate: now },
-        });
-
-        await prisma.roleHistory.create({
-          data: {
-            userId: parseInt(id),
-            role,
-            designation: designation || "",
-            affiliation,
-            startDate: now,
-          },
-        });
-      }
-
       return await prisma.user.update({
         where: { id: parseInt(id) },
         data: {
