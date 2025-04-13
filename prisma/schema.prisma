@@ -138,6 +138,7 @@ model Society {
 
   memberships      SocietyMembership[]
   meetings         Meeting[]
+  executiveHistory SocietyExecutiveHistory[]
 }
 
 
@@ -152,6 +153,20 @@ model SocietyMembership {
 
   @@unique([studentId, societyId])
 }
+
+model SocietyExecutiveHistory {
+  id           Int       @id @default(autoincrement())
+  societyId    Int
+  role         ExecutiveRole
+  personId     Int
+  personName   String
+  startDate    DateTime  @default(now())
+  endDate      DateTime?
+  society      Society   @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  @@unique([societyId, role, personId])
+}
+
 
 model Meeting {
   id         Int        @id @default(autoincrement())
@@ -184,6 +199,16 @@ model Minutes {
   meetingId  Int
 
   meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
+
+enum ExecutiveRole {
+  MENTOR
+  COMENTOR
+  PRESIDENT
+  VICE_PRESIDENT
+  SECRETARY
+  TREASURER
+  MEDIA_HEAD
 }
 
 enum MembershipRole {
