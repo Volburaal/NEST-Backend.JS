@@ -313,60 +313,65 @@ export const deleteSociety = async (req, res) => {
 
 export const getMembers = async (req, res) => {
     try {
-        const society = await prisma.society.findUnique({
-            where: {
-                id: parseInt(req.user.affiliation),
-            },
-            select: {
-                id: true,
-                mentorID: true,
-                coMentorID: true,
-                memberships: {
-                    select: {
-                        studentId: true,
-                        role: true,
-                        student: {
-                            select: {
-                                id: true,
-                                name: true,
+        if (req.user.role === "STUDENT_AFFAIRS") {
+            const memberData = await prisma.societyMembership.findMany({})
+            return res.status(200).json(memberData);
+        }
+        else {
+            const society = await prisma.society.findUnique({
+                where: {
+                    id: parseInt(req.user.affiliation),
+                },
+                select: {
+                    id: true,
+                    mentorID: true,
+                    coMentorID: true,
+                    memberships: {
+                        select: {
+                            studentId: true,
+                            role: true,
+                            student: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                },
                             },
                         },
                     },
                 },
-            },
-        });
+            });
 
-        if (!society) {
-            return res.status(404).json({ error: "Society not found" });
+            if (!society) {
+                return res.status(404).json({ error: "Society not found" });
+            }
+
+            const mentor = society.mentorID
+                ? await prisma.faculty.findUnique({
+                      where: { id: society.mentorID },
+                      select: { id: true, name: true },
+                  })
+                : null;
+
+            const coMentor = society.coMentorID
+                ? await prisma.faculty.findUnique({
+                      where: { id: society.coMentorID },
+                      select: { id: true, name: true },
+                  })
+                : null;
+
+            const membersData = society.memberships.map((membership) => ({
+                studentId: membership.studentId,
+                studentName: membership.student.name,
+                role: membership.role,
+            }));
+
+            return res.status(200).json({
+                societyId: society.id,
+                mentor: mentor ? mentor : null,
+                coMentor: coMentor ? coMentor : null,
+                members: membersData,
+            });
         }
-
-        const mentor = society.mentorID
-            ? await prisma.faculty.findUnique({
-                  where: { id: society.mentorID },
-                  select: { id: true, name: true },
-              })
-            : null;
-
-        const coMentor = society.coMentorID
-            ? await prisma.faculty.findUnique({
-                  where: { id: society.coMentorID },
-                  select: { id: true, name: true },
-              })
-            : null;
-
-        const membersData = society.memberships.map((membership) => ({
-            studentId: membership.studentId,
-            studentName: membership.student.name,
-            role: membership.role,
-        }));
-
-        return res.status(200).json({
-            societyId: society.id,
-            mentor: mentor ? mentor : null,
-            coMentor: coMentor ? coMentor : null,
-            members: membersData,
-        });
-
     } catch (error) {
         console.error("Error fetching members:", error);
         res.status(500).json({ error: "Server error" });
@@ -374,6 +379,7 @@ export const getMembers = async (req, res) => {
         await prisma.$disconnect();
     }
 };
+
 
 export const deleteMember = async (req, res) => {
     try {
