@@ -11,7 +11,6 @@ import {
 const router = express.Router();
 
 router.get("/", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), getSociety);
-
 router.post("/create", authenticate(["STUDENT_AFFAIRS"]), createSociety);
 router.put("/update", authenticate(["STUDENT_AFFAIRS"]), updateSociety);
 router.delete("/delete", authenticate(["STUDENT_AFFAIRS"]), deleteSociety);
