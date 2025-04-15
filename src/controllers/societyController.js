@@ -100,6 +100,7 @@ export const removeStudent = async (req, res) => {
 export const createSociety = async (req, res) => {
     try {
         const { name, fullName, mentorID, coMentorID, presidentId, vicePresidentId, secretaryId, treasurerId, mediaHeadId, token } = req.body;
+        console.log(req.body)
 
         if (!name || !fullName || !mentorID) {
             return res.status(400).json({ error: "Name, full name, and mentor ID are required" });
@@ -315,7 +316,7 @@ export const getMembers = async (req, res) => {
     try {
         if (req.user.role === "STUDENT_AFFAIRS") {
             const memberData = await prisma.societyMembership.findMany({})
-            return res.status(200).json(memberData);
+            return res.status(200).json({members: memberData});
         }
         else {
             const society = await prisma.society.findUnique({
@@ -433,6 +434,23 @@ export const capture = async (req, res) => {
         console.log(req.body)
 
         return res.status(200).json({ message: "Captured"});
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: "Server error" });
+    } finally {
+        await prisma.$disconnect();
+    }
+};
+
+export const getEbHistory = async (req, res) => {
+    try {
+        const {id} = req.params;
+        const history = await prisma.societyExecutiveHistory.findMany({
+            where:{
+                societyId: parseInt(id)
+            }
+        })
+        return res.status(200).json(history);
     } catch (error) {
         console.error("Error:", error);
         res.status(500).json({ error: "Server error" });

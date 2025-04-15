@@ -163,8 +163,6 @@ model SocietyExecutiveHistory {
   startDate    DateTime  @default(now())
   endDate      DateTime?
   society      Society   @relation(fields: [societyId], references: [id], onDelete: Cascade)
-
-  @@unique([societyId, role, personId])
 }
 
 

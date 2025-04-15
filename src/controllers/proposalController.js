@@ -167,17 +167,18 @@ export const createProposal = async (req, res) => {
       subject: `Proposal for review`,
       html: emailContent,
     };
+    
+    if (recipientEmails.length > 0){
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error sending email:', error);
+          return res.status(500).json({ error: 'Error sending email' });
+        }
+        res.status(200).json({ message: 'Emails sent successfully' });
+      });
+    }
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).json({ error: 'Error sending email' });
-      }
-      res.status(200).json({ message: 'Emails sent successfully' });
-    });
-
-    //Submission Conformation Email
-    let submittedByMail = ""
+    let submittedByMail;
     const user = await prisma.user.findUnique({
       where:{id: req.user.id}
     });
@@ -225,13 +226,15 @@ export const createProposal = async (req, res) => {
       html: emailContent,
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).json({ error: 'Error sending email' });
-      }
-      res.status(200).json({ message: 'Emails sent successfully' });
-    });
+    if(submittedByMail){
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error sending email:', error);
+          return res.status(500).json({ error: 'Error sending email' });
+        }
+        res.status(200).json({ message: 'Emails sent successfully' });
+      }); 
+    }
 
     const proposal = await prisma.proposal.create({
       data: {

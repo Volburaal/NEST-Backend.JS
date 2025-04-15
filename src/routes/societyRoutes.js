@@ -5,8 +5,8 @@ import {
     createSociety,
     updateSociety,
     deleteSociety,
+    getEbHistory
 } from "../controllers/societyController.js";
-import { scheduleMeeting } from "../controllers/meetingController.js";
 
 const router = express.Router();
 
@@ -15,4 +15,5 @@ router.get("/", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), getSociety
 router.post("/create", authenticate(["STUDENT_AFFAIRS"]), createSociety);
 router.put("/update", authenticate(["STUDENT_AFFAIRS"]), updateSociety);
 router.delete("/delete", authenticate(["STUDENT_AFFAIRS"]), deleteSociety);
+router.get("/:id/history", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), getEbHistory)
 export default router;
