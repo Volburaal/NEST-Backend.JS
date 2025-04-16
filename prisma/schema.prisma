@@ -9,20 +9,17 @@ datasource db {
 
 model User {
   id                 Int           @id @default(autoincrement())
-  name               String
   email              String        @unique
   password           String
   role               Role
   affiliation        String?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
-  designation        String?
   tenureEnd          DateTime?
   tenureStart        DateTime?
   comments           Comment[]     @relation("UserComments")
   reviews            Proposal[]    @relation("ReviewedProposals")
   proposals          Proposal[]    @relation("SubmittedProposals")
-  roleHistory        RoleHistory[]
 
   assignedToStudent  Int?
   assignedToFaculty  Int?
@@ -63,21 +60,6 @@ model Comment {
   user       User     @relation("UserComments", fields: [userId], references: [id])
 }
 
-model RoleHistory {
-  id          Int       @id @default(autoincrement())
-  userId      Int
-  role        Role
-  designation String?
-  affiliation String?
-  startDate   DateTime
-  endDate     DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
 model File {
   id         Int      @id @default(autoincrement())
   filename   String
@@ -110,19 +92,28 @@ model Student {
 
   assignedUsers User[]  @relation("UserToStudent")
 
-  memberships  SocietyMembership[]
+  presidentOf     Society[] @relation("SocietyPresident")
+  vicePresidentOf Society[] @relation("SocietyVicePresident")
+  secretaryOf     Society[] @relation("SocietySecretary")
+  treasurerOf     Society[] @relation("SocietyTreasurer")
+  mediaHeadOf     Society[] @relation("SocietyMediaHead")
+
+  memberships    SocietyMembership[]
+  attendances    Attendance[]
 }
 
+
 model Faculty {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  extension    Int
-  name         String
-  dept         Department
+  id                   Int      @id @default(autoincrement())
+  email                String   @unique
+  extension            Int
+  name                 String
+  dept                 Department
 
-  assignedUsers User[]  @relation("UserToFaculty")
+  assignedUsers        User[]  @relation("UserToFaculty")
 
-  societies    Society[] @relation("SocietyMentor")
+  societiesMentor      Society[] @relation("SocietyMentor")
+  societiesCoMentor    Society[] @relation("SocietyCoMentor")
 }
 
 model Society {
@@ -134,10 +125,22 @@ model Society {
   presidentId      Int?
   vicePresidentId  Int?
   secretaryId      Int?
+  treasurerId      Int?
+  mediaHeadId      Int?
 
   mentor           Faculty?    @relation("SocietyMentor", fields: [mentorID], references: [id])
-  memberships   SocietyMembership[]
+  coMentor         Faculty?    @relation("SocietyCoMentor", fields: [coMentorID], references: [id])
+  president        Student?    @relation("SocietyPresident", fields:[presidentId], references: [id])
+  vicePresident    Student?    @relation("SocietyVicePresident", fields:[vicePresidentId], references: [id])
+  secretary        Student?    @relation("SocietySecretary", fields:[secretaryId], references: [id])
+  treasurer        Student?    @relation("SocietyTreasurer", fields:[treasurerId], references: [id])
+  mediaHead        Student?    @relation("SocietyMediaHead", fields:[mediaHeadId], references: [id])
+
+  memberships      SocietyMembership[]
+  meetings         Meeting[]
+  executiveHistory SocietyExecutiveHistory[]
 }
+
 
 model SocietyMembership {
   id             Int      @id @default(autoincrement())
@@ -151,12 +154,68 @@ model SocietyMembership {
   @@unique([studentId, societyId])
 }
 
+model SocietyExecutiveHistory {
+  id           Int       @id @default(autoincrement())
+  societyId    Int
+  role         ExecutiveRole
+  personId     Int
+  personName   String
+  startDate    DateTime  @default(now())
+  endDate      DateTime?
+  society      Society   @relation(fields: [societyId], references: [id], onDelete: Cascade)
+}
+
+
+model Meeting {
+  id         Int        @id @default(autoincrement())
+  title      String
+  date       DateTime
+  time       String
+  venue      String
+  agenda     String
+  societyId  Int
+  society    Society    @relation(fields: [societyId], references: [id])
+  attendance Attendance[]
+  minutes    Minutes[]
+}
+
+model Attendance {
+  id         Int      @id @default(autoincrement())
+  meetingId  Int
+  studentId  Int
+  isPresent  Boolean  @default(false)
+
+  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, studentId])
+}
+
+model Minutes {
+  id         Int      @id @default(autoincrement())
+  content    String
+  meetingId  Int
+
+  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
+
+enum ExecutiveRole {
+  MENTOR
+  COMENTOR
+  PRESIDENT
+  VICE_PRESIDENT
+  SECRETARY
+  TREASURER
+  MEDIA_HEAD
+}
+
 enum MembershipRole {
   MEMBER
   PRESIDENT
   VICE_PRESIDENT
   SECRETARY
   TREASURER
+  MEDIA_HEAD
 }
 
 enum Department{

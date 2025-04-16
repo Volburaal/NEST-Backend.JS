@@ -97,11 +97,10 @@ export const removeStudent = async (req, res) => {
     }
 };
 
-
-
 export const createSociety = async (req, res) => {
     try {
-        const { name, fullName, mentorID, coMentorID, token } = req.body;
+        const { name, fullName, mentorID, coMentorID, presidentId, vicePresidentId, secretaryId, treasurerId, mediaHeadId, token } = req.body;
+        console.log(req.body)
 
         if (!name || !fullName || !mentorID) {
             return res.status(400).json({ error: "Name, full name, and mentor ID are required" });
@@ -113,8 +112,63 @@ export const createSociety = async (req, res) => {
                 fullName,
                 mentorID,
                 coMentorID,
+                presidentId,
+                vicePresidentId,
+                secretaryId,
+                treasurerId,
+                mediaHeadId
             },
         });
+        let mentorName, coMentorName;
+        let executiveNames = []
+        let ids = [presidentId, vicePresidentId, secretaryId, treasurerId, mediaHeadId];
+        if(mentorID){
+            const mentor = await prisma.faculty.findUnique({
+                where:{id:mentorID}
+            })
+            mentorName = mentor.name;
+        }
+        if(coMentorID){
+            coMentor = await prisma.faculty.findUnique({
+                where:{id:coMentorID}
+            })
+            coMentorName = coMentor.name;
+        }
+        for (const id of ids){
+            if(id){
+                const executive = await prisma.student.findUnique({
+                    where:{id: id}
+                })
+                const executiveName = executive.name;
+                executiveNames.push(executiveName);
+            }
+            else{
+                executiveNames.push("Name")
+            }
+        }
+        const executiveRoles = [
+            { role: 'MENTOR', personId: mentorID, personName: mentorName, societyId: newSociety.id },
+            { role: 'COMENTOR', personId: coMentorID, personName: coMentorName, societyId: newSociety.id },
+            { role: 'PRESIDENT', personId: presidentId, personName: executiveNames[0], societyId: newSociety.id },
+            { role: 'VICE_PRESIDENT', personId: vicePresidentId, personName: executiveNames[1], societyId: newSociety.id },
+            { role: 'SECRETARY', personId: secretaryId, personName: executiveNames[2], societyId: newSociety.id },
+            { role: 'TREASURER', personId: treasurerId, personName: executiveNames[3], societyId: newSociety.id },
+            { role: 'MEDIA_HEAD', personId: mediaHeadId, personName: executiveNames[4], societyId: newSociety.id }
+        ];
+
+        for (let exec of executiveRoles) {
+            if (exec.personId !== null) {
+                await prisma.societyExecutiveHistory.create({
+                    data: {
+                        role: exec.role,
+                        personId: exec.personId,
+                        personName: exec.personName,
+                        societyId: exec.societyId,
+                        startDate: new Date(),
+                    }
+                });
+            }
+        }
         return res.status(201).json({ message: "Society created successfully", society: newSociety });
     } catch (error) {
         console.error("Error creating society:", error);
@@ -126,14 +180,13 @@ export const createSociety = async (req, res) => {
 
 export const updateSociety = async (req, res) => {
     try {
+        const { id, name, fullName, mentorID, coMentorID, presidentId, vicePresidentId, secretaryId, treasurerId, mediaHeadId, token } = req.body;
 
-        const { id, name, fullName, mentorID, coMentorID, token } = req.body;
-
-                if (!id) {
+        if (!id) {
             return res.status(400).json({ error: "Society ID is required" });
         }
 
-                const existingSociety = await prisma.society.findUnique({
+        const existingSociety = await prisma.society.findUnique({
             where: { id },
         });
 
@@ -141,17 +194,85 @@ export const updateSociety = async (req, res) => {
             return res.status(404).json({ error: "Society not found" });
         }
 
-                const updatedSociety = await prisma.society.update({
+        const rolesToUpdate = [
+            { role: 'MENTOR', personId: mentorID },
+            { role: 'COMENTOR', personId: coMentorID },
+            { role: 'PRESIDENT', personId: presidentId },
+            { role: 'VICE_PRESIDENT', personId: vicePresidentId },
+            { role: 'SECRETARY', personId: secretaryId },
+            { role: 'TREASURER', personId: treasurerId },
+            { role: 'MEDIA_HEAD', personId: mediaHeadId }
+        ];
+
+        for (let { role, personId } of rolesToUpdate) {
+            if (personId !== null) {
+                // Find the existing executive record for this role
+                const existingHistory = await prisma.societyExecutiveHistory.findFirst({
+                    where: {
+                        societyId: id,
+                        role: role,
+                        endDate: null,  // Looking for the currently active record
+                    },
+                });
+
+                // If there's an existing record, we compare the new person with the old person
+                if (existingHistory) {
+                    if (existingHistory.personId === personId) {
+                        // If the person is the same as the previous, skip the update
+                        continue;
+                    }
+
+                    // If the person is different, update the endDate of the existing record
+                    await prisma.societyExecutiveHistory.update({
+                        where: { id: existingHistory.id },
+                        data: { endDate: new Date() },
+                    });
+                }
+
+                // Determine the person's name based on whether they are a faculty or student
+                let pName;
+                if (role === 'MENTOR' || role === 'COMENTOR') {
+                    const faculty = await prisma.faculty.findUnique({
+                        where: { id: personId }
+                    });
+                    pName = faculty?.name;
+                } else {
+                    const student = await prisma.student.findUnique({
+                        where: { id: personId }
+                    });
+                    pName = student?.name;
+                }
+
+                // Create a new executive history record
+                await prisma.societyExecutiveHistory.create({
+                    data: {
+                        role: role,
+                        personId: personId,
+                        personName: pName,
+                        societyId: id,
+                        startDate: new Date(),
+                    }
+                });
+            }
+        }
+
+        // Now, update the society itself
+        const updatedSociety = await prisma.society.update({
             where: { id },
             data: {
                 name: name || existingSociety.name,
                 fullName: fullName || existingSociety.fullName,
-                mentorID: mentorID || existingSociety.mentorID,
-                coMentorID: coMentorID || existingSociety.coMentorID,
-                            },
+                mentorID,
+                coMentorID,
+                presidentId,
+                vicePresidentId,
+                secretaryId,
+                treasurerId,
+                mediaHeadId
+            },
         });
 
-                return res.status(200).json({ message: "Society updated successfully", society: updatedSociety });
+        return res.status(200).json({ message: "Society updated successfully", society: updatedSociety });
     } catch (error) {
         console.error("Error updating society:", error);
         res.status(500).json({ error: "Server error" });
@@ -159,6 +280,7 @@ export const updateSociety = async (req, res) => {
         await prisma.$disconnect();
     }
 };
+
 
 export const deleteSociety = async (req, res) => {
     try {
@@ -192,60 +314,65 @@ export const deleteSociety = async (req, res) => {
 
 export const getMembers = async (req, res) => {
     try {
-        const society = await prisma.society.findUnique({
-            where: {
-                id: parseInt(req.user.affiliation),
-            },
-            select: {
-                id: true,
-                mentorID: true,
-                coMentorID: true,
-                memberships: {
-                    select: {
-                        studentId: true,
-                        role: true,
-                        student: {
-                            select: {
-                                id: true,
-                                name: true,
+        if (req.user.role === "STUDENT_AFFAIRS") {
+            const memberData = await prisma.societyMembership.findMany({})
+            return res.status(200).json({members: memberData});
+        }
+        else {
+            const society = await prisma.society.findUnique({
+                where: {
+                    id: parseInt(req.user.affiliation),
+                },
+                select: {
+                    id: true,
+                    mentorID: true,
+                    coMentorID: true,
+                    memberships: {
+                        select: {
+                            studentId: true,
+                            role: true,
+                            student: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                },
                             },
                         },
                     },
                 },
-            },
-        });
+            });
 
-        if (!society) {
-            return res.status(404).json({ error: "Society not found" });
+            if (!society) {
+                return res.status(404).json({ error: "Society not found" });
+            }
+
+            const mentor = society.mentorID
+                ? await prisma.faculty.findUnique({
+                      where: { id: society.mentorID },
+                      select: { id: true, name: true },
+                  })
+                : null;
+
+            const coMentor = society.coMentorID
+                ? await prisma.faculty.findUnique({
+                      where: { id: society.coMentorID },
+                      select: { id: true, name: true },
+                  })
+                : null;
+
+            const membersData = society.memberships.map((membership) => ({
+                studentId: membership.studentId,
+                studentName: membership.student.name,
+                role: membership.role,
+            }));
+
+            return res.status(200).json({
+                societyId: society.id,
+                mentor: mentor ? mentor : null,
+                coMentor: coMentor ? coMentor : null,
+                members: membersData,
+            });
         }
-
-        const mentor = society.mentorID
-            ? await prisma.faculty.findUnique({
-                  where: { id: society.mentorID },
-                  select: { id: true, name: true },
-              })
-            : null;
-
-        const coMentor = society.coMentorID
-            ? await prisma.faculty.findUnique({
-                  where: { id: society.coMentorID },
-                  select: { id: true, name: true },
-              })
-            : null;
-
-        const membersData = society.memberships.map((membership) => ({
-            studentId: membership.studentId,
-            studentName: membership.student.name,
-            role: membership.role,
-        }));
-
-        return res.status(200).json({
-            societyId: society.id,
-            mentor: mentor ? mentor : null,
-            coMentor: coMentor ? coMentor : null,
-            members: membersData,
-        });
-
     } catch (error) {
         console.error("Error fetching members:", error);
         res.status(500).json({ error: "Server error" });
@@ -253,6 +380,7 @@ export const getMembers = async (req, res) => {
         await prisma.$disconnect();
     }
 };
+
 
 export const deleteMember = async (req, res) => {
     try {
@@ -306,6 +434,23 @@ export const capture = async (req, res) => {
         console.log(req.body)
 
         return res.status(200).json({ message: "Captured"});
+    } catch (error) {
+        console.error("Error:", error);
+        res.status(500).json({ error: "Server error" });
+    } finally {
+        await prisma.$disconnect();
+    }
+};
+
+export const getEbHistory = async (req, res) => {
+    try {
+        const {id} = req.params;
+        const history = await prisma.societyExecutiveHistory.findMany({
+            where:{
+                societyId: parseInt(id)
+            }
+        })
+        return res.status(200).json(history);
     } catch (error) {
         console.error("Error:", error);
         res.status(500).json({ error: "Server error" });

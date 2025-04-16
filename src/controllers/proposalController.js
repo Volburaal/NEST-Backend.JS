@@ -28,7 +28,6 @@ export const getProposals = async (req, res) => {
     const include = {
       submittedBy: {
         select: {
-          name: true,
           email: true,
           role: true,
         },
@@ -37,7 +36,6 @@ export const getProposals = async (req, res) => {
         include: {
           user: {
             select: {
-              name: true,
               role: true,
             },
           },
@@ -169,17 +167,18 @@ export const createProposal = async (req, res) => {
       subject: `Proposal for review`,
       html: emailContent,
     };
+    
+    if (recipientEmails.length > 0){
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error sending email:', error);
+          return res.status(500).json({ error: 'Error sending email' });
+        }
+        res.status(200).json({ message: 'Emails sent successfully' });
+      });
+    }
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).json({ error: 'Error sending email' });
-      }
-      res.status(200).json({ message: 'Emails sent successfully' });
-    });
-
-    //Submission Conformation Email
-    let submittedByMail = ""
+    let submittedByMail;
     const user = await prisma.user.findUnique({
       where:{id: req.user.id}
     });
@@ -227,13 +226,15 @@ export const createProposal = async (req, res) => {
       html: emailContent,
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Error sending email:', error);
-        return res.status(500).json({ error: 'Error sending email' });
-      }
-      res.status(200).json({ message: 'Emails sent successfully' });
-    });
+    if(submittedByMail){
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.error('Error sending email:', error);
+          return res.status(500).json({ error: 'Error sending email' });
+        }
+        res.status(200).json({ message: 'Emails sent successfully' });
+      }); 
+    }
 
     const proposal = await prisma.proposal.create({
       data: {
@@ -260,6 +261,14 @@ export const createProposal = async (req, res) => {
     await prisma.$disconnect();
   }
 };
+
+function normalizeRole(role) {
+  if (!role) return null;
+  return role
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+}
 
 export const reviewProposal = async (req, res) => {
   try {
@@ -330,12 +339,17 @@ export const reviewProposal = async (req, res) => {
       }
 
       // Send email to the submitter for an approved proposal
-      emailContent = `
-       <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">Status Update</h1>
-          <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px;">
-              <p style="font-weight: bold; text-align: center;">Proposal for ${proposal.title} has been ${formattedStatus} by ${commentedByName}</p>
-              <p >Comments: ${comments}</p>
-          </div>
+      currentRole = normalizeRole(role)
+      nexRole = normalizeRole(nextReviewerRole)
+      const emailContent = `
+        <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">Status Update</h1>
+        <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px;">
+            <p style="font-weight: bold; text-align: center;">Proposal for ${proposal.title} has been ${formattedStatus} by ${commentedByName} (${normalizedCurrentRole})</p>
+            <p>Comments: ${comments}</p>
+            ${nextReviewerRole ? 
+                `<p>The proposal will next be reviewed by ${nexRole}</p>` :
+                `<p>The proposal has been fully approved.</p>`}
+        </div>
       `;
 
       const submittedBy = proposal.submittedBy;
@@ -380,11 +394,13 @@ export const reviewProposal = async (req, res) => {
       });
 
       for (const reviewer of nextReviewers) {
-        const faculty = await prisma.faculty.findUnique({
-          where: { id: reviewer.assignedToFaculty },
-        });
-        if (faculty) {
-          recipientEmails.push(faculty.email);
+        if(reviewer.assignedToFaculty){
+          const faculty = await prisma.faculty.findUnique({
+            where: { id: reviewer.assignedToFaculty },
+          });
+          if (faculty) {
+            recipientEmails.push(faculty.email);
+          }
         }
       }
 

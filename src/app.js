@@ -13,6 +13,7 @@ import societyRoutes from './routes/societyRoutes.js'
 import studentRoutes from './routes/studentRoutes.js'
 import facultyRoutes from './routes/facultyRoutes.js'
 import memberRoutes from './routes/memberRoutes.js'
+import meetingRoutes from './routes/meetingRoutes.js'
 import { PrismaClient } from "@prisma/client";
 
 
@@ -45,13 +46,14 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/proposals", proposalRoutes);
 app.use("/api/files", fileRoutes);
-app.use("/api/feedback", feedbackRoutes);
+app.use("/api/members", memberRoutes);
+app.use("/api/meeting", meetingRoutes)
 app.use("/api/society", societyRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/faculty", facultyRoutes);
-app.use("/api/members",memberRoutes)
+app.use("/api/feedback", feedbackRoutes);
+app.use("/api/proposals", proposalRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
