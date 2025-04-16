@@ -4,14 +4,16 @@ const prisma = new PrismaClient();
 
 export const getSociety = async (req, res) => {
     try{
+        console.log(req.body)
         if(req.user.role == "STUDENT_AFFAIRS"){
             let societyList = await prisma.society.findMany({});
             res.json(societyList)
         }
-        if(req.user.role=="STUDENT"){
+        if(req.user.role=="STUDENT" || req.user.role == "MENTOR"){
             let society = await prisma.society.findUnique({
                 where: {id: parseInt(req.user.affiliation)},
             })
+            console.log(society)
             res.json([society])
         }
     }

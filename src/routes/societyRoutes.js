@@ -12,7 +12,7 @@ const router = express.Router();
 
 router.get("/", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), getSociety);
 router.post("/create", authenticate(["STUDENT_AFFAIRS"]), createSociety);
-router.put("/update", authenticate(["STUDENT_AFFAIRS"]), updateSociety);
+router.put("/update", authenticate(["MENTOR","STUDENT_AFFAIRS"]), updateSociety);
 router.delete("/delete", authenticate(["STUDENT_AFFAIRS"]), deleteSociety);
 router.get("/:id/history", authenticate(["STUDENT","MENTOR","STUDENT_AFFAIRS"]), getEbHistory)
 export default router;
