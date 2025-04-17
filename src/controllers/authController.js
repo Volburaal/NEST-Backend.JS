@@ -141,6 +141,7 @@ export const register = async (req, res) => {
       "STUDENT_AFFAIRS",
       "DIRECTOR",
       "FINANCE_MANAGER",
+      "GENERAL_USER"
     ];
     if (!validRoles.includes(role)) {
       return res.status(400).json({

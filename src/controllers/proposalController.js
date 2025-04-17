@@ -22,6 +22,7 @@ const generateStudentEmail = (rollnumber) => {
 
 export const getProposals = async (req, res) => {
   try {
+
     const { id, role, affiliation } = req.user;
     let proposals;
 
@@ -332,6 +333,9 @@ export const reviewProposal = async (req, res) => {
           break;
         case "DIRECTOR":
           nextReviewerRole = "FINANCE_MANAGER";
+          if(proposal.budget <= 0){
+            nextReviewerRole = null;
+          }
           break;
         case "FINANCE_MANAGER":
           nextReviewerRole = null;

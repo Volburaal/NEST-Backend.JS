@@ -100,6 +100,7 @@ model Student {
 
   memberships    SocietyMembership[]
   attendances    Attendance[]
+  applications   InductionApplication[]
 }
 
 
@@ -117,30 +118,52 @@ model Faculty {
 }
 
 model Society {
-  id               Int        @id @default(autoincrement())
-  name             String     @unique
-  fullName         String
-  mentorID         Int?
-  coMentorID       Int?
-  presidentId      Int?
-  vicePresidentId  Int?
-  secretaryId      Int?
-  treasurerId      Int?
-  mediaHeadId      Int?
+  id                  Int         @id @default(autoincrement())
+  name                String      @unique
+  fullName            String
+  mentorID            Int?
+  coMentorID          Int?
+  presidentId         Int?
+  vicePresidentId     Int?
+  secretaryId         Int?
+  treasurerId         Int?
+  mediaHeadId         Int?
 
-  mentor           Faculty?    @relation("SocietyMentor", fields: [mentorID], references: [id])
-  coMentor         Faculty?    @relation("SocietyCoMentor", fields: [coMentorID], references: [id])
-  president        Student?    @relation("SocietyPresident", fields:[presidentId], references: [id])
-  vicePresident    Student?    @relation("SocietyVicePresident", fields:[vicePresidentId], references: [id])
-  secretary        Student?    @relation("SocietySecretary", fields:[secretaryId], references: [id])
-  treasurer        Student?    @relation("SocietyTreasurer", fields:[treasurerId], references: [id])
-  mediaHead        Student?    @relation("SocietyMediaHead", fields:[mediaHeadId], references: [id])
+  inductionsOpen      Boolean     @default(false)
 
-  memberships      SocietyMembership[]
-  meetings         Meeting[]
-  executiveHistory SocietyExecutiveHistory[]
+  mentor              Faculty?    @relation("SocietyMentor", fields: [mentorID], references: [id])
+  coMentor            Faculty?    @relation("SocietyCoMentor", fields: [coMentorID], references: [id])
+  president           Student?    @relation("SocietyPresident", fields:[presidentId], references: [id])
+  vicePresident       Student?    @relation("SocietyVicePresident", fields:[vicePresidentId], references: [id])
+  secretary           Student?    @relation("SocietySecretary", fields:[secretaryId], references: [id])
+  treasurer           Student?    @relation("SocietyTreasurer", fields:[treasurerId], references: [id])
+  mediaHead           Student?    @relation("SocietyMediaHead", fields:[mediaHeadId], references: [id])
+
+  memberships         SocietyMembership[]
+  meetings            Meeting[]
+  executiveHistory    SocietyExecutiveHistory[]
+  inductionSessions   InductionSession[]
 }
 
+model InductionApplication{
+  id            Int @id @default(autoincrement())
+  inductionId   Int
+  studentId     Int
+  selected      Boolean @default(false)
+
+  student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  induction     InductionSession @relation(fields: [inductionId], references: [id], onDelete: Cascade)
+}
+model InductionSession{
+  id              Int @id  @default(autoincrement())
+  start           DateTime @default(now())
+  end             DateTime?
+  societyId       Int
+
+  applicants      InductionApplication[]
+
+  society Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+}
 
 model SocietyMembership {
   id             Int      @id @default(autoincrement())
@@ -239,6 +262,7 @@ enum Role {
   STUDENT_AFFAIRS
   DIRECTOR
   FINANCE_MANAGER
+  GENERAL_USER
 }
 
 enum ProposalStatus {
