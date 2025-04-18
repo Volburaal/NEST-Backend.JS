@@ -11,7 +11,7 @@ const router = express.Router();
 // Fetch proposals based on role and current state
 router.get(
   "/",
-  authenticate(["STUDENT", "MENTOR", "STUDENT_AFFAIRS", "DIRECTOR", "FINANCE_MANAGER"]),
+  authenticate(["GENERAL_USER", "STUDENT", "MENTOR", "STUDENT_AFFAIRS", "DIRECTOR", "FINANCE_MANAGER"]),
   getProposals
 );
 
