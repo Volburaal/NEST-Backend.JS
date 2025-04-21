@@ -159,6 +159,7 @@ model InductionSession{
   start           DateTime @default(now())
   end             DateTime?
   societyId       Int
+  approvalStage   String?
 
   applicants      InductionApplication[]
 
