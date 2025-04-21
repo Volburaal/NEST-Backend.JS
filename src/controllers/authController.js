@@ -56,7 +56,6 @@ export const register = async (req, res) => {
       `;
     }
     if(role !== "STUDENT" && assignedToFaculty !== -1){
-      console.log(req.body)
       const faculty = await prisma.faculty.findUnique({
         where:{id: assignedToFaculty}
       })

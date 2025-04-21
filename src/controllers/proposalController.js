@@ -282,7 +282,6 @@ export const reviewProposal = async (req, res) => {
     const { id } = req.params;
     const { status, comments } = req.body;
     const { role, id: userId } = req.user;
-    console.log(req.user)
 
     const formattedStatus = status.toLowerCase();
 

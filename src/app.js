@@ -14,6 +14,7 @@ import studentRoutes from './routes/studentRoutes.js'
 import facultyRoutes from './routes/facultyRoutes.js'
 import memberRoutes from './routes/memberRoutes.js'
 import meetingRoutes from './routes/meetingRoutes.js'
+import inductionRoutes from './routes/inductionRoutes.js'
 import { PrismaClient } from "@prisma/client";
 
 
@@ -54,6 +55,7 @@ app.use("/api/student", studentRoutes);
 app.use("/api/faculty", facultyRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/proposals", proposalRoutes);
+app.use("/api/society/induction", inductionRoutes)
 
 // Error handling middleware
 app.use((err, req, res, next) => {

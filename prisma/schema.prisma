@@ -154,12 +154,15 @@ model InductionApplication{
   student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   induction     InductionSession @relation(fields: [inductionId], references: [id], onDelete: Cascade)
 }
+
 model InductionSession{
   id              Int @id  @default(autoincrement())
   start           DateTime @default(now())
   end             DateTime?
   societyId       Int
   approvalStage   String?
+  subject         String
+  body            String
 
   applicants      InductionApplication[]
 

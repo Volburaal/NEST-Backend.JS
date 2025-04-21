@@ -4,7 +4,6 @@ const prisma = new PrismaClient();
 
 export const getSociety = async (req, res) => {
     try{
-        console.log(req.body)
         if(req.user.role == "STUDENT_AFFAIRS"){
             let societyList = await prisma.society.findMany({});
             res.json(societyList)
@@ -13,7 +12,6 @@ export const getSociety = async (req, res) => {
             let society = await prisma.society.findUnique({
                 where: {id: parseInt(req.user.affiliation)},
             })
-            console.log(society)
             res.json([society])
         }
     }
@@ -110,7 +108,6 @@ export const removeStudent = async (req, res) => {
 export const createSociety = async (req, res) => {
     try {
         const { name, fullName, mentorID, coMentorID, presidentId, vicePresidentId, secretaryId, treasurerId, mediaHeadId, token } = req.body;
-        console.log(req.body)
 
         if (!name || !fullName || !mentorID) {
             return res.status(400).json({ error: "Name, full name, and mentor ID are required" });
@@ -441,7 +438,6 @@ export const deleteMember = async (req, res) => {
 
 export const capture = async (req, res) => {
     try {
-        console.log(req.body)
 
         return res.status(200).json({ message: "Captured"});
     } catch (error) {

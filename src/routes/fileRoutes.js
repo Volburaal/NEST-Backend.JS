@@ -142,7 +142,6 @@ router.get('/:fileId',
 
       // const filePath = path.resolve(__dirname, './uploads', file.path);
       const filePath = './'+file.path;
-      console.log(filePath)
       res.download(filePath, file.filename);
     } catch (error) {
       console.error('Download error:', error);
