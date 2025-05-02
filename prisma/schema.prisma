@@ -47,6 +47,17 @@ model Proposal {
   files            File[]
   reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
   submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
+  requirements     Requirement[]  @relation("ProposalRequirement")
+}
+
+model Requirement{
+  id               Int            @id @default(autoincrement())
+  name             String
+  price            Int
+  quantity         Int
+
+  proposalId       Int
+  proposal         Proposal       @relation("ProposalRequirement", fields: [proposalId], references: [id])
 }
 
 model Comment {
@@ -153,6 +164,8 @@ model InductionApplication{
 
   student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   induction     InductionSession @relation(fields: [inductionId], references: [id], onDelete: Cascade)
+
+  @@unique([inductionId, studentId])
 }
 
 model InductionSession{
@@ -191,7 +204,6 @@ model SocietyExecutiveHistory {
   endDate      DateTime?
   society      Society   @relation(fields: [societyId], references: [id], onDelete: Cascade)
 }
-
 
 model Meeting {
   id         Int        @id @default(autoincrement())

@@ -42,6 +42,7 @@ export const getProposals = async (req, res) => {
         },
       },
       files: true,
+      requirements: true
     };
 
     switch (role) {
@@ -99,7 +100,23 @@ export const getProposals = async (req, res) => {
 
 export const createProposal = async (req, res) => {
   try {
-    const { title, description, eventDate, posters, budget, venue } = req.body;
+    const { title, description, eventDate, posters, requirements, budget, venue, tag } = req.body;
+    if(tag === "EVENT"){
+      await prisma.proposal.create({
+        data:{
+          title,
+          society: "",
+          venue,
+          description,
+          status: "APPROVED",
+          nextReviewerRole: null,
+          submittedById: req.user.id,
+          eventDate: new Date(eventDate),
+          budget: 0
+        }
+      })
+      return res.status(200).json({message:"Event Added"})
+    }
 
     if (!title || !description || !eventDate || !venue) {
       return res.status(400).json({ error: "All fields are required" });
@@ -259,6 +276,16 @@ export const createProposal = async (req, res) => {
         comments: true,
       },
     });
+    for (let requirement of requirements){
+      await prisma.requirement.create({
+        data:{
+          name: requirement.requirement,
+          price: requirement.price,
+          quantity: requirement.quantity,
+          proposalId: proposal.id,
+        }
+      })
+    }
 
     res.status(201).json(proposal);
   } catch (error) {
