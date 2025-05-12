@@ -1,31 +1,20 @@
 import nodemailer from 'nodemailer';
 import { PrismaClient } from "@prisma/client";
+import { generateStudentEmail } from "./mailFacilitators.js"
 
 const prisma = new PrismaClient();
 const OTPs = new Map();
-
-const generateStudentEmail = (rollnumber) => {
-    // const campusCodes = {
-    //   F: 'cfd',
-    //   I: 'isb',
-    //   L: 'lhr',
-    //   P: 'pwr',
-    //   K: 'khi',
-    // };
-  
-    const batch = rollnumber.substring(0, 2);
-    const campus = rollnumber[2].toLowerCase();
-    const studentNumber = rollnumber.substring(4);
-    
-    return `${campus}${batch}${studentNumber}@cfd.nu.edu.pk`;
-    //return `${campus}${batch}${studentNumber}@${campusCodes[campus]}.nu.edu.pk`;
-  };
 
 export const createSession = async (req, res) => {
     try {
         const {subject, body} = req.body;
         const {affiliation} = req.user;
-
+        const settings = await prisma.settings.findUnique({
+            where:{id:1}
+        })
+        if(!settings.allowInductions){
+            return res.status(400).json({message: "Induction creation has been disabled by student affairs."})
+        }
         const oldInduction = await prisma.inductionSession.findMany({
             where: {
                 societyId: parseInt(affiliation),
@@ -223,10 +212,13 @@ export const sessionApplication = async (req, res) => {
     try {
         const {selectedSession, rollNumber, phone, whatsapp, residency} = req.body
         const student = await prisma.student.findUnique({
-            where:{rollnumber: rollNumber}
+            where:{rollnumber: rollNumber.toUpperCase()}
         })
         if(!student){
             return res.status(400).json({message:"Student doesnt exist"})
+        }
+        if (student.blacklisted){
+            res.status(400).json({message:"You cannot apply for inductions, you are blacklisted"})
         }
         else{
             const session = await prisma.inductionSession.findUnique({
@@ -326,7 +318,8 @@ export const getSessions = async (req, res) => {
 export const verifyOtp = async(req, res) => {
     try{
         const {OTP, rollNumber} = req.body
-        const otp = OTPs.get(rollNumber)
+        console.log(OTPs)
+        const otp = OTPs.get(rollNumber.toUpperCase())
         if(otp){
             if(OTP == otp){
                 return res.status(200).json({message: "OTP Verified", status: true})

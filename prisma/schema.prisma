@@ -29,25 +29,38 @@ model User {
 }
 
 model Proposal {
-  id               Int            @id @default(autoincrement())
+  id               Int                    @id @default(autoincrement())
   title            String
   society          String
   description      String
   eventDate        DateTime
   posters          Json?
   budget           Float?
-  status           ProposalStatus @default(PENDING)
+  status           ProposalStatus         @default(PENDING)
   submittedById    Int
   reviewedById     Int?
   nextReviewerRole Role?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  venue            String         @default("Default Venue")
-  comments         Comment[]      @relation("ProposalComments")
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  venue            String                 @default("Default Venue")
+  comments         Comment[]              @relation("ProposalComments")
   files            File[]
-  reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
-  submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
-  requirements     Requirement[]  @relation("ProposalRequirement")
+  reviewedBy       User?                  @relation("ReviewedProposals", fields: [reviewedById], references: [id])
+  submittedBy      User                   @relation("SubmittedProposals", fields: [submittedById], references: [id])
+  requirements     Requirement[]          @relation("ProposalRequirement")
+  zerorequirements ZeroRequirement[]  @relation("ProposalZeroRequirement")
+}
+
+model ZeroRequirement{
+  id               Int               @id @default(autoincrement())
+  name             String
+  for              String
+
+  departmentId     Int
+  dept             ZeroDepartment?   @relation("ProposalZeroDept", fields: [departmentId], references: [id])
+
+  proposalId       Int
+  proposal         Proposal          @relation("ProposalZeroRequirement", fields: [proposalId], references: [id])
 }
 
 model Requirement{
@@ -99,7 +112,8 @@ model Student {
   rollnumber String     @unique
   phone      String?
   whatsapp   String?
-  residency  Residency @default(DAYSCHOLAR)
+  blacklisted Boolean   @default(false)
+  residency  Residency  @default(DAYSCHOLAR)
 
   assignedUsers User[]  @relation("UserToStudent")
 
@@ -236,6 +250,21 @@ model Minutes {
   meetingId  Int
 
   meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
+
+model Settings{
+  id                  Int      @id @default(autoincrement())
+  allowInductions     Boolean  @default(true)
+  allowProposals      Boolean  @default(true)
+  minNotice           Int      @default(7)
+}
+
+model ZeroDepartment{
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+
+  requirements ZeroRequirement[] @relation("ProposalZeroDept")
 }
 
 enum ExecutiveRole {

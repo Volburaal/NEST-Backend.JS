@@ -28,8 +28,12 @@ export const addStudent = async (req, res) => {
     try {
         const { selectedStudent, role } = req.body;
         const newRole = role.toUpperCase().replace(/ /g, '_');
-        
-
+        const student = await prisma.student.findUnique({
+            where:{id: selectedStudent}
+        })
+        if(student.blacklisted){
+            return res.status(400).json({ message: "This student is blacklisted, they cannot be a part of any society" });
+        }
         const societyID = parseInt(req.user.affiliation);
         const existingMembership = await prisma.societyMembership.findUnique({
             where: {
@@ -41,7 +45,7 @@ export const addStudent = async (req, res) => {
         });
 
         if (existingMembership) {
-            return res.status(400).json({ error: "Student is already a member of this society." });
+            return res.status(400).json({ message: "Student is already a member of this society." });
         }
         await prisma.societyMembership.create({
             data: {
@@ -62,7 +66,8 @@ export const addStudent = async (req, res) => {
 
 export const removeStudent = async (req, res) => {
     try {
-        const { selectedStudent } = req.body;          const societyName = req.user.affiliation;          
+        const { selectedStudent } = req.body;
+        const societyName = req.user.affiliation;          
                 const Tsociety = await prisma.society.findUnique({
             where: {
                 name: societyName,
