@@ -332,6 +332,7 @@ export const reviewProposal = async (req, res) => {
         comments: true,
         submittedBy: true,
         reviewedBy: true,
+        zerorequirements: true,
       },
     });
 
@@ -389,7 +390,94 @@ export const reviewProposal = async (req, res) => {
       }
 
       // Send email to the submitter for an approved proposal
-      const emailContent = `
+      let emailContent = `
+        <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">Status Update</h1>
+        <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px;">
+            <p style="font-weight: bold; text-align: center;">Proposal for ${proposal.title} has been ${formattedStatus} by ${commentedByName} (${normalizeRole(role)})</p>
+            <p>Comments: ${comments}</p>
+            ${nextReviewerRole ? 
+                `<p>The proposal will next be reviewed by ${normalizeRole(nextReviewerRole)}</p>` :
+                `<p>The proposal has been fully approved.</p>`}
+        </div>
+      `;
+
+      if(nextReviewerRole === null){
+        const departments = await prisma.zeroDepartment.findMany();
+
+        for(const department of departments){
+          let tableRows = ""
+          const zeroReqs = await prisma.zeroRequirement.findMany({
+            where:{
+              proposalId: parseInt(id),
+              departmentId: department.id
+            }
+          });
+          if(zeroReqs.length !== 0){
+            for(const zeroReq of zeroReqs){
+              tableRows += `
+                <tr>
+                  <td style="border: 1px solid rgb(241, 134, 255); padding: 8px;">${zeroReq.name}</td>
+                  <td style="border: 1px solid rgb(241, 134, 255); padding: 8px;">${zeroReq.for}</td>
+                </tr>
+              `;
+            }
+            let societyName = ""
+            switch(proposal.society){
+              case "Student Affairs":
+                societyName = "Student Affairs"
+                break;
+              default:
+                const society = await prisma.society.findUnique({
+                  where:{name: proposal.society}
+                })
+                societyName = society.fullName
+                break;
+            }
+            emailContent = `
+              <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">
+                  Requirements Notification
+              </h1>
+              <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px; display: block; text-align: center;">
+                  <h3 style="font-weight: normal; text-align: justify;">
+                      The event titled <strong>${proposal.title}</strong> is scheduled to take place on <strong>${proposal.eventDate}</strong>. 
+                      This event, organized by <strong>${societyName}</strong>, has received approval from both the Campus Director and the Student Affairs Incharge.
+                      <br><br>
+                      To ensure the smooth execution of the event, the following items/support are required from your department:
+                  </h3>
+                  
+                  <table style="width: 80%; border-collapse: collapse; margin-top: 20px; margin-left: auto; margin-right: auto;">
+                      <tr>
+                          <th style="border: 1px solid rgb(241, 134, 255); padding: 8px; color: rgb(167, 220, 255); width: 30%; text-align: center;">Requirement Name</th>
+                          <th style="border: 1px solid rgb(241, 134, 255); padding: 8px; color: rgb(167, 220, 255); width: 70%; text-align: center;">For</th>
+                      </tr>
+                      ${tableRows}
+                  </table>
+              </div>
+            `
+            let transporter = nodemailer.createTransport({
+              service: 'gmail',
+              auth: {
+                user: process.env.SENDER_ADDRESS,
+                pass: process.env.EMAIL_APP_PASSWORD,
+              },
+            });
+            let mailOptions = {
+              from: process.env.SENDER_ADDRESS,
+              to: department.email,
+              subject: `Requirements Notification for ${proposal.title}`,
+              html: emailContent,
+            };
+            transporter.sendMail(mailOptions, (error, info) => {
+              if (error) {
+                console.error('Error sending email:', error);
+                return res.status(500).json({ error: 'Error sending email to submitter' });
+              }
+            });
+          }
+        }
+      }
+
+      emailContent = `
         <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">Status Update</h1>
         <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px;">
             <p style="font-weight: bold; text-align: center;">Proposal for ${proposal.title} has been ${formattedStatus} by ${commentedByName} (${normalizeRole(role)})</p>

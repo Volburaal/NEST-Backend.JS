@@ -57,10 +57,10 @@ model ZeroRequirement{
   for              String
 
   departmentId     Int
-  dept             ZeroDepartment?   @relation("ProposalZeroDept", fields: [departmentId], references: [id])
+  dept             ZeroDepartment?   @relation("ProposalZeroDept", fields: [departmentId], references: [id], onDelete: Cascade)
 
   proposalId       Int
-  proposal         Proposal          @relation("ProposalZeroRequirement", fields: [proposalId], references: [id])
+  proposal         Proposal          @relation("ProposalZeroRequirement", fields: [proposalId], references: [id], onDelete: Cascade)
 }
 
 model Requirement{
@@ -70,7 +70,7 @@ model Requirement{
   quantity         Int
 
   proposalId       Int
-  proposal         Proposal       @relation("ProposalRequirement", fields: [proposalId], references: [id])
+  proposal         Proposal       @relation("ProposalRequirement", fields: [proposalId], references: [id],  onDelete: Cascade)
 }
 
 model Comment {
@@ -127,7 +127,6 @@ model Student {
   attendances    Attendance[]
   applications   InductionApplication[]
 }
-
 
 model Faculty {
   id                   Int      @id @default(autoincrement())
