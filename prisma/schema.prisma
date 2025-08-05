@@ -170,12 +170,12 @@ model Society {
 }
 
 model InductionApplication{
-  id            Int @id @default(autoincrement())
+  id            Int              @id @default(autoincrement())
   inductionId   Int
   studentId     Int
-  selected      Boolean @default(false)
+  selected      Boolean          @default(false)
 
-  student       Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student       Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
   induction     InductionSession @relation(fields: [inductionId], references: [id], onDelete: Cascade)
 
   @@unique([inductionId, studentId])

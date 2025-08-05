@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { generateStudentEmail } from "./mailFacilitators.js"
 
 const prisma = new PrismaClient();
-  
+  3
 const getMentorAndCoMentorEmails = async (societyId) => {
   const society = await prisma.society.findUnique({
     where: { id: societyId },
@@ -148,40 +148,20 @@ export const scheduleMeeting = async (req, res) => {
 
 export const getMeetings = async (req, res) => {
   try {
-    const userRole = req.user.role;
-    let meetings;
-
-    if (userRole === 'STUDENT' || userRole === 'MENTOR') {
-      const societyId = req.user.affiliation;
-      meetings = await prisma.meeting.findMany({
-        where: {
-          societyId: parseInt(societyId),
-        },
-        include: {
-          attendance: {
-            include: {
-              student: true,
-            },
+    const {societyId} = req.params;
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        societyId: parseInt(societyId),
+      },
+      include: {
+        attendance: {
+          include: {
+            student: true,
           },
-          minutes: true,
         },
-      });
-
-    } else if (userRole === 'STUDENT_AFFAIRS') {
-      meetings = await prisma.meeting.findMany({
-        include: {
-          society: true,
-          attendance: {
-            include: {
-              student: true,
-            },
-          },
-          minutes: true,
-        },
-      });
-    } else {
-      return res.status(403).json({ error: 'Unauthorized access' });
-    }
+        minutes: true,
+      },
+    });
     return res.status(200).json(meetings);
 
   } catch (error) {

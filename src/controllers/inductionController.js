@@ -207,7 +207,6 @@ export const updateSelection = async (req, res) => {
     }
 };
 
-
 export const sessionApplication = async (req, res) => {
     try {
         const {selectedSession, rollNumber, phone, whatsapp, residency} = req.body
@@ -318,10 +317,10 @@ export const getSessions = async (req, res) => {
 export const verifyOtp = async(req, res) => {
     try{
         const {OTP, rollNumber} = req.body
-        console.log(OTPs)
         const otp = OTPs.get(rollNumber.toUpperCase())
         if(otp){
             if(OTP == otp){
+                OTPs.delete(rollNumber)
                 return res.status(200).json({message: "OTP Verified", status: true})
             }
             else{
@@ -337,6 +336,7 @@ export const verifyOtp = async(req, res) => {
         return res.status(500).json({message: "Error encountered while verifying OTP"})
     }
 }
+
 
 export const generateOtp = async(req, res) => {
     try{
