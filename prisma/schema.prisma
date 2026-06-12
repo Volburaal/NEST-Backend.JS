@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,16 +8,24 @@ datasource db {
 }
 
 model User {
-  id          Int        @id @default(autoincrement())
-  name        String
-  email       String     @unique
-  password    String
-  role        Role
-  affiliation String?
-  proposals   Proposal[] @relation("SubmittedProposals")
-  reviews     Proposal[] @relation("ReviewedProposals")
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id                 Int           @id @default(autoincrement())
+  email              String        @unique
+  password           String
+  role               Role
+  affiliation        String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  tenureEnd          DateTime?
+  tenureStart        DateTime?
+  comments           Comment[]     @relation("UserComments")
+  reviews            Proposal[]    @relation("ReviewedProposals")
+  proposals          Proposal[]    @relation("SubmittedProposals")
+
+  assignedToStudent  Int?
+  assignedToFaculty  Int?
+
+  assignedStudent    Student? @relation("UserToStudent", fields: [assignedToStudent], references: [id], onDelete: SetDefault)
+  assignedFaculty    Faculty? @relation("UserToFaculty", fields: [assignedToFaculty], references: [id], onDelete: SetDefault)
 }
 
 model Proposal {
@@ -33,16 +35,202 @@ model Proposal {
   description      String
   eventDate        DateTime
   posters          Json?
-  budget           Float
+  budget           Float?
   status           ProposalStatus @default(PENDING)
-  comments         String?
   submittedById    Int
-  submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
   reviewedById     Int?
-  reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
   nextReviewerRole Role?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+  venue            String         @default("Default Venue")
+  comments         Comment[]      @relation("ProposalComments")
+  files            File[]
+  reviewedBy       User?          @relation("ReviewedProposals", fields: [reviewedById], references: [id])
+  submittedBy      User           @relation("SubmittedProposals", fields: [submittedById], references: [id])
+}
+
+model Comment {
+  id         Int      @id @default(autoincrement())
+  content    String
+  createdAt  DateTime @default(now())
+  userId     Int
+  proposalId Int
+  commentedByName String?
+  proposal   Proposal @relation("ProposalComments", fields: [proposalId], references: [id])
+  user       User     @relation("UserComments", fields: [userId], references: [id])
+}
+
+model File {
+  id         Int      @id @default(autoincrement())
+  filename   String
+  path       String
+  uploadedAt DateTime @default(now())
+  proposalId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+}
+
+model Feedback{
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  submittedBy String
+}
+
+model Student {
+  id         Int        @id @default(autoincrement())
+  name       String
+  cnic       String     @unique
+  degree     String
+  rollnumber String     @unique
+  phone      String?
+  whatsapp   String?
+  residency  Residency @default(DAYSCHOLAR)
+
+  assignedUsers User[]  @relation("UserToStudent")
+
+  presidentOf     Society[] @relation("SocietyPresident")
+  vicePresidentOf Society[] @relation("SocietyVicePresident")
+  secretaryOf     Society[] @relation("SocietySecretary")
+  treasurerOf     Society[] @relation("SocietyTreasurer")
+  mediaHeadOf     Society[] @relation("SocietyMediaHead")
+
+  memberships    SocietyMembership[]
+  attendances    Attendance[]
+}
+
+
+model Faculty {
+  id                   Int      @id @default(autoincrement())
+  email                String   @unique
+  extension            Int
+  name                 String
+  dept                 Department
+
+  assignedUsers        User[]  @relation("UserToFaculty")
+
+  societiesMentor      Society[] @relation("SocietyMentor")
+  societiesCoMentor    Society[] @relation("SocietyCoMentor")
+}
+
+model Society {
+  id               Int        @id @default(autoincrement())
+  name             String     @unique
+  fullName         String
+  mentorID         Int?
+  coMentorID       Int?
+  presidentId      Int?
+  vicePresidentId  Int?
+  secretaryId      Int?
+  treasurerId      Int?
+  mediaHeadId      Int?
+
+  mentor           Faculty?    @relation("SocietyMentor", fields: [mentorID], references: [id])
+  coMentor         Faculty?    @relation("SocietyCoMentor", fields: [coMentorID], references: [id])
+  president        Student?    @relation("SocietyPresident", fields:[presidentId], references: [id])
+  vicePresident    Student?    @relation("SocietyVicePresident", fields:[vicePresidentId], references: [id])
+  secretary        Student?    @relation("SocietySecretary", fields:[secretaryId], references: [id])
+  treasurer        Student?    @relation("SocietyTreasurer", fields:[treasurerId], references: [id])
+  mediaHead        Student?    @relation("SocietyMediaHead", fields:[mediaHeadId], references: [id])
+
+  memberships      SocietyMembership[]
+  meetings         Meeting[]
+  executiveHistory SocietyExecutiveHistory[]
+}
+
+
+model SocietyMembership {
+  id             Int      @id @default(autoincrement())
+  studentId      Int
+  societyId      Int
+  role           MembershipRole @default(MEMBER)
+
+  student        Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  society        Society @relation(fields: [societyId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, societyId])
+}
+
+model SocietyExecutiveHistory {
+  id           Int       @id @default(autoincrement())
+  societyId    Int
+  role         ExecutiveRole
+  personId     Int
+  personName   String
+  startDate    DateTime  @default(now())
+  endDate      DateTime?
+  society      Society   @relation(fields: [societyId], references: [id], onDelete: Cascade)
+}
+
+
+model Meeting {
+  id         Int        @id @default(autoincrement())
+  title      String
+  date       DateTime
+  time       String
+  venue      String
+  agenda     String
+  societyId  Int
+  society    Society    @relation(fields: [societyId], references: [id])
+  attendance Attendance[]
+  minutes    Minutes[]
+}
+
+model Attendance {
+  id         Int      @id @default(autoincrement())
+  meetingId  Int
+  studentId  Int
+  isPresent  Boolean  @default(false)
+
+  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, studentId])
+}
+
+model Minutes {
+  id         Int      @id @default(autoincrement())
+  content    String
+  meetingId  Int
+
+  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+}
+
+enum ExecutiveRole {
+  MENTOR
+  COMENTOR
+  PRESIDENT
+  VICE_PRESIDENT
+  SECRETARY
+  TREASURER
+  MEDIA_HEAD
+}
+
+enum MembershipRole {
+  MEMBER
+  PRESIDENT
+  VICE_PRESIDENT
+  SECRETARY
+  TREASURER
+  MEDIA_HEAD
+}
+
+enum Department{
+  CS
+  SE
+  AI
+  EE
+  SnH
+  FSM
+  Other
+}
+
+enum Residency{
+  DAYSCHOLAR
+  HOSTELLITE
 }
 
 enum Role {
