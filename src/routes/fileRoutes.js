@@ -12,7 +12,6 @@ const __dirname = path.dirname(__filename);
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Configure multer storage
 const storage = multer.diskStorage({
   destination: path.join(__dirname, '../../uploads'),
   filename: (req, file, cb) => {
@@ -142,7 +141,6 @@ router.get('/:fileId',
 
       // const filePath = path.resolve(__dirname, './uploads', file.path);
       const filePath = './'+file.path;
-      console.log(filePath)
       res.download(filePath, file.filename);
     } catch (error) {
       console.error('Download error:', error);

@@ -1,24 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import nodemailer from 'nodemailer';
+import { generateStudentEmail } from "./mailFacilitators.js"
 
 const prisma = new PrismaClient();
-
-const generateStudentEmail = (rollnumber) => {
-  // const campusCodes = {
-  //   F: 'cfd',
-  //   I: 'isb',
-  //   L: 'lhr',
-  //   P: 'pwr',
-  //   K: 'khi',
-  // };
-
-  const batch = rollnumber.substring(0, 2);
-  const campus = rollnumber[2].toLowerCase();
-  const studentNumber = rollnumber.substring(4);
-  
-  return `${campus}${batch}${studentNumber}@cfd.nu.edu.pk`;
-  //return `${campus}${batch}${studentNumber}@${campusCodes[campus]}.nu.edu.pk`;
-};
 
 export const getProposals = async (req, res) => {
   try {
@@ -42,6 +26,12 @@ export const getProposals = async (req, res) => {
         },
       },
       files: true,
+      requirements: true,
+      zerorequirements: {
+        include:{
+          dept: true,
+        }
+      },
     };
 
     switch (role) {
@@ -77,7 +67,14 @@ export const getProposals = async (req, res) => {
           include,
         });
         break;
-
+      case "GENERAL_USER":
+        proposals = await prisma.proposal.findMany({
+          where:{
+            status: "APPROVED",
+            nextReviewerRole: null,
+          }
+        })
+        break;
       default:
         return res.status(403).json({ message: "Role not recognized" });
     }
@@ -92,8 +89,38 @@ export const getProposals = async (req, res) => {
 
 export const createProposal = async (req, res) => {
   try {
-    const { title, description, eventDate, posters, budget, venue } = req.body;
+    const { title, description, eventDate, posters, requirements, zeroRequirements, budget, venue, tag } = req.body;
+   
+    if(tag === "EVENT"){
+      await prisma.proposal.create({
+        data:{
+          title,
+          society: "",
+          venue,
+          description,
+          status: "APPROVED",
+          nextReviewerRole: null,
+          submittedById: req.user.id,
+          eventDate: new Date(eventDate),
+          budget: 0
+        }
+      })
+      return res.status(200).json({message:"Event Added"})
+    }
+    else{
 
+    }
+
+    const settings = await prisma.settings.findUnique({where:{id:1}})
+    if(!settings.allowProposals){
+      return res.status(400).json({ message: "Proposal Creation has been disabled by student affairs" });
+    }
+    const evDate = new Date(eventDate)
+    const diffInDays = Math.floor((evDate - new Date())/ (1000 * 60 * 60 * 24));
+    if(diffInDays < settings.minNotice){
+      return res.status(400).json({message: "A minimum notice of " + settings.minNotice + " days must be provided for any event."})
+    }
+    
     if (!title || !description || !eventDate || !venue) {
       return res.status(400).json({ error: "All fields are required" });
     }
@@ -252,6 +279,27 @@ export const createProposal = async (req, res) => {
         comments: true,
       },
     });
+    for (let requirement of requirements){
+      await prisma.requirement.create({
+        data:{
+          name: requirement.requirement,
+          price: requirement.price,
+          quantity: requirement.quantity,
+          proposalId: proposal.id,
+        }
+      })
+    }
+    for(const requirement of zeroRequirements){
+      await prisma.zeroRequirement.create({
+        data:{
+          name: requirement.requirement,
+          for: requirement.reason,
+          departmentId: requirement.departmentId,
+          proposalId: proposal.id,
+        }
+      })
+    }
+
 
     res.status(201).json(proposal);
   } catch (error) {
@@ -284,13 +332,13 @@ export const reviewProposal = async (req, res) => {
         comments: true,
         submittedBy: true,
         reviewedBy: true,
+        zerorequirements: true,
       },
     });
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
-        name: true,
         role: true,
         assignedToStudent: true,
         assignedToFaculty: true,
@@ -332,6 +380,9 @@ export const reviewProposal = async (req, res) => {
           break;
         case "DIRECTOR":
           nextReviewerRole = "FINANCE_MANAGER";
+          if(proposal.budget <= 0){
+            nextReviewerRole = null;
+          }
           break;
         case "FINANCE_MANAGER":
           nextReviewerRole = null;
@@ -339,15 +390,100 @@ export const reviewProposal = async (req, res) => {
       }
 
       // Send email to the submitter for an approved proposal
-      currentRole = normalizeRole(role)
-      nexRole = normalizeRole(nextReviewerRole)
-      const emailContent = `
+      let emailContent = `
         <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">Status Update</h1>
         <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px;">
-            <p style="font-weight: bold; text-align: center;">Proposal for ${proposal.title} has been ${formattedStatus} by ${commentedByName} (${normalizedCurrentRole})</p>
+            <p style="font-weight: bold; text-align: center;">Proposal for ${proposal.title} has been ${formattedStatus} by ${commentedByName} (${normalizeRole(role)})</p>
             <p>Comments: ${comments}</p>
             ${nextReviewerRole ? 
-                `<p>The proposal will next be reviewed by ${nexRole}</p>` :
+                `<p>The proposal will next be reviewed by ${normalizeRole(nextReviewerRole)}</p>` :
+                `<p>The proposal has been fully approved.</p>`}
+        </div>
+      `;
+
+      if(nextReviewerRole === null){
+        const departments = await prisma.zeroDepartment.findMany();
+
+        for(const department of departments){
+          let tableRows = ""
+          const zeroReqs = await prisma.zeroRequirement.findMany({
+            where:{
+              proposalId: parseInt(id),
+              departmentId: department.id
+            }
+          });
+          if(zeroReqs.length !== 0){
+            for(const zeroReq of zeroReqs){
+              tableRows += `
+                <tr>
+                  <td style="border: 1px solid rgb(241, 134, 255); padding: 8px;">${zeroReq.name}</td>
+                  <td style="border: 1px solid rgb(241, 134, 255); padding: 8px;">${zeroReq.for}</td>
+                </tr>
+              `;
+            }
+            let societyName = ""
+            switch(proposal.society){
+              case "Student Affairs":
+                societyName = "Student Affairs"
+                break;
+              default:
+                const society = await prisma.society.findUnique({
+                  where:{name: proposal.society}
+                })
+                societyName = society.fullName
+                break;
+            }
+            emailContent = `
+              <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">
+                  Requirements Notification
+              </h1>
+              <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px; display: block; text-align: center;">
+                  <h3 style="font-weight: normal; text-align: justify;">
+                      The event titled <strong>${proposal.title}</strong> is scheduled to take place on <strong>${proposal.eventDate}</strong>. 
+                      This event, organized by <strong>${societyName}</strong>, has received approval from both the Campus Director and the Student Affairs Incharge.
+                      <br><br>
+                      To ensure the smooth execution of the event, the following items/support are required from your department:
+                  </h3>
+                  
+                  <table style="width: 80%; border-collapse: collapse; margin-top: 20px; margin-left: auto; margin-right: auto;">
+                      <tr>
+                          <th style="border: 1px solid rgb(241, 134, 255); padding: 8px; color: rgb(167, 220, 255); width: 30%; text-align: center;">Requirement Name</th>
+                          <th style="border: 1px solid rgb(241, 134, 255); padding: 8px; color: rgb(167, 220, 255); width: 70%; text-align: center;">For</th>
+                      </tr>
+                      ${tableRows}
+                  </table>
+              </div>
+            `
+            let transporter = nodemailer.createTransport({
+              service: 'gmail',
+              auth: {
+                user: process.env.SENDER_ADDRESS,
+                pass: process.env.EMAIL_APP_PASSWORD,
+              },
+            });
+            let mailOptions = {
+              from: process.env.SENDER_ADDRESS,
+              to: department.email,
+              subject: `Requirements Notification for ${proposal.title}`,
+              html: emailContent,
+            };
+            transporter.sendMail(mailOptions, (error, info) => {
+              if (error) {
+                console.error('Error sending email:', error);
+                return res.status(500).json({ error: 'Error sending email to submitter' });
+              }
+            });
+          }
+        }
+      }
+
+      emailContent = `
+        <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">Status Update</h1>
+        <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px;">
+            <p style="font-weight: bold; text-align: center;">Proposal for ${proposal.title} has been ${formattedStatus} by ${commentedByName} (${normalizeRole(role)})</p>
+            <p>Comments: ${comments}</p>
+            ${nextReviewerRole ? 
+                `<p>The proposal will next be reviewed by ${normalizeRole(nextReviewerRole)}</p>` :
                 `<p>The proposal has been fully approved.</p>`}
         </div>
       `;
@@ -361,10 +497,12 @@ export const reviewProposal = async (req, res) => {
         submitterEmail = generateStudentEmail(student.rollnumber);
       }
       else if (submittedBy.role === "STUDENT_AFFAIRS"){
-        const faculty = await prisma.faculty.findUnique({
-          where: { id: submittedBy.assignedToFaculty },
-        });
+        if(submittedBy.assignedToFaculty){
+          const faculty = await prisma.faculty.findUnique({
+            where: { id: submittedBy.assignedToFaculty },
+          });
         submitterEmail = faculty.email;
+      }
       }
 
       let transporter = nodemailer.createTransport({
@@ -388,50 +526,51 @@ export const reviewProposal = async (req, res) => {
           return res.status(500).json({ error: 'Error sending email to submitter' });
         }
       });
+      if (nextReviewerRole){
+        const nextReviewers = await prisma.user.findMany({
+          where: { role: nextReviewerRole },
+        });
 
-      const nextReviewers = await prisma.user.findMany({
-        where: { role: nextReviewerRole },
-      });
-
-      for (const reviewer of nextReviewers) {
-        if(reviewer.assignedToFaculty){
-          const faculty = await prisma.faculty.findUnique({
-            where: { id: reviewer.assignedToFaculty },
-          });
-          if (faculty) {
-            recipientEmails.push(faculty.email);
+        for (const reviewer of nextReviewers) {
+          if(reviewer.assignedToFaculty){
+            const faculty = await prisma.faculty.findUnique({
+              where: { id: reviewer.assignedToFaculty },
+            });
+            if (faculty) {
+              recipientEmails.push(faculty.email);
+            }
           }
         }
-      }
 
-      emailContent = `
-        <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">New Proposal for Review</h1>
-        <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px;">
-            <p style="font-weight: bold; text-align: center;">Proposal for ${proposal.title} is awaiting your review.</p>
-            <p>${proposal.description}</p>
-            <ul>
-                <li>Date: ${proposal.eventDate}</li>
-                <li>Venue: ${proposal.venue}</li>
-                <li>Requested Budget: ${proposal.budget}</li>
-            </ul>
-            <h3 style="color: rgb(243, 55, 159);">Please access the proposal management system <a href="http://59.103.246.24:3000/" style="color: rgb(0, 255, 255);">here</a> and review this proposal.</h3>
-        </div>
-      `;
+        emailContent = `
+          <h1 style="color:rgb(213, 238, 255); text-align:center; background-color: rgb(67, 0, 87); padding: 2%; margin:0px; border-radius: 50px 50px 0px 0px;">New Proposal for Review</h1>
+          <div style="color: rgb(248, 199, 255); background-color: rgb(49, 49, 49); margin: 0px; padding: 5%; border-radius: 0px 0px 50px 50px;">
+              <p style="font-weight: bold; text-align: center;">Proposal for ${proposal.title} is awaiting your review.</p>
+              <p>${proposal.description}</p>
+              <ul>
+                  <li>Date: ${proposal.eventDate}</li>
+                  <li>Venue: ${proposal.venue}</li>
+                  <li>Requested Budget: ${proposal.budget}</li>
+              </ul>
+              <h3 style="color: rgb(243, 55, 159);">Please access the proposal management system <a href="http://59.103.246.24:3000/" style="color: rgb(0, 255, 255);">here</a> and review this proposal.</h3>
+          </div>
+        `;
 
-      for (const recipient of recipientEmails) {
-        mailOptions = {
-          from: process.env.SENDER_ADDRESS,
-          to: recipient,
-          subject: `New Proposal for Review: ${proposal.title}`,
-          html: emailContent,
-        };
+        for (const recipient of recipientEmails) {
+          mailOptions = {
+            from: process.env.SENDER_ADDRESS,
+            to: recipient,
+            subject: `New Proposal for Review: ${proposal.title}`,
+            html: emailContent,
+          };
 
-        // Send email to the next reviewer
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.error('Error sending email to next reviewer:', error);
-          }
-        });
+          // Send email to the next reviewer
+          transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+              console.error('Error sending email to next reviewer:', error);
+            }
+          });
+        }
       }
     } else if (status.toUpperCase() === "REJECTED") {
 
@@ -496,7 +635,6 @@ export const reviewProposal = async (req, res) => {
             include: {
               user: {
                 select: {
-                  name: true,
                   role: true,
                 },
               },
